@@ -25,14 +25,14 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(RAW_ROOT ${raw_SOURCE_DIR}/sdk)
-set(RAW_PUBLIC_DIR ${RAW_ROOT}/public/steam)
+set(RAW_INCLUDE_DIR ${RAW_ROOT}/public)
 
-add_library(${PROJECT_NAME} ${SRC_DIR}/caulk.h ${RAW_PUBLIC_DIR}/steam_api_flat.h)
+add_library(${PROJECT_NAME} ${SRC_DIR}/caulk.h)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC ${SRC_DIR}
-    PRIVATE ${RAW_PUBLIC_DIR})
+    PRIVATE ${RAW_INCLUDE_DIR})
 
 if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
     if(WIN32)
