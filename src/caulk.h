@@ -1,3 +1,11 @@
 #pragma once
 
-#include "steam/steam_api_flat.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "__gen.h"
+
+#ifdef __cplusplus
+}
+#endif

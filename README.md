@@ -1,6 +1,6 @@
 # caulk
 
-THE Steamworks API wrapper for use with CMake. [Schwungus](https://github.com/Schwungus)-certified.
+THE Steamworks API wrapper for use with plain C. [Schwungus](https://github.com/Schwungus)-certified.
 
 ## Usage
 
