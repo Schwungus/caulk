@@ -6,8 +6,13 @@ project(
     DESCRIPTION "THE Steamworks API wrapper for use with plain C."
     LANGUAGES C)
 
-# include(FetchContent)
-#
+include(FetchContent)
+FetchContent_Declare(
+    yyjson
+    GIT_REPOSITORY "https://github.com/ibireme/yyjson.git"
+    GIT_TAG "0.11.1")
+FetchContent_MakeAvailable(yyjson)
+
 # FetchContent_Declare(raw URL "https://partner.steamgames.com/downloads/steamworks_sdk_162.zip")
 # FetchContent_MakeAvailable(raw)
 
@@ -28,6 +33,7 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(GEN_NAME ${PROJECT_NAME}GenBindings)
 add_executable(${GEN_NAME} ${SRC_DIR}/gen.c)
+target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
 set(GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/steamworksgen)
 set(GEN_H_OUT ${GEN_OUT_DIR}/__gen.h)
@@ -35,12 +41,12 @@ set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 add_custom_command(
     TARGET ${GEN_NAME}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${GEN_NAME}> ARGS ${GEN_H_OUT} ${GEN_C_OUT} ${RAW_INCLUDE_DIR}/steam/steam_api_flat.h
+    COMMAND $<TARGET_FILE:${GEN_NAME}> ARGS ${GEN_H_OUT} ${GEN_C_OUT} ${RAW_INCLUDE_DIR}/steam/steam_api.json
     BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT}
     VERBATIM)
 
 set(LIB_NAME ${PROJECT_NAME})
-add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${SRC_DIR}/caulkSteamTypes.h ${GEN_H_OUT} ${GEN_C_OUT})
+add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${GEN_H_OUT} ${GEN_C_OUT})
 add_dependencies(${LIB_NAME} ${GEN_NAME})
 set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(${LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
