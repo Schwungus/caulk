@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
             fprintf(hOutput, "    %s = %s,\n", name, value);
         }
 
-        fprintf(hOutput, "};\n\n", name);
+        fprintf(hOutput, "};\n\n");
     }
     printl(hOutput, "\n");
 
