@@ -113,14 +113,6 @@ int main(int argc, char* argv[]) {
             fprintf(hOutput, "%s %s", type, name);
         printl(hOutput, ";\n");
     }
-    printl(hOutput, "\n");
-
-    struc = NULL;
-    structs = yyjson_obj_get(obj, "structs");
-    yyjson_arr_iter_init(structs, &iter);
-    while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-        yyjson_obj_get(struc, "struct");
-    }
 
     yyjson_doc_free(doc);
     fclose(hOutput);
