@@ -59,7 +59,11 @@ int main(int argc, char* argv[]) {
     yyjson_arr_iter_init(enums, &iter);
     while ((enm = yyjson_arr_iter_next(&iter)) != NULL) {
         const char* name = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
+
+        fprintf(hOutput, "#ifndef __cplusplus\n");
         fprintf(hOutput, "typedef enum32_t %s;\n", name);
+        fprintf(hOutput, "#endif\n");
+
         fprintf(hOutput, "enum %s {\n", name);
 
         yyjson_val* val = NULL;
