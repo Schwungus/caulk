@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "yyjson.h"
+#include <yyjson.h>
 
 #define BUF_MAX (2048)
 #define ARGS_MAX (128)
@@ -36,7 +36,6 @@ int main(int argc, char* argv[]) {
 
     fprintf(hOutput, "#pragma once\n\n");
     fprintf(hOutput, "#include <stdint.h>\n\n");
-    fprintf(hOutput, "typedef uint32_t enum32_t;\n\n");
 
     fprintf(cOutput, "#include \"__gen.h\"\n\n");
 
@@ -53,6 +52,8 @@ int main(int argc, char* argv[]) {
         fprintf(hOutput, "#define %s ((%s)(%s))\n", name, type, value);
     }
     printl(hOutput, "\n");
+
+    fprintf(hOutput, "typedef uint32_t enum32_t;\n\n");
 
     yyjson_val* enm = NULL;
     yyjson_val* enums = yyjson_obj_get(obj, "enums");
@@ -80,24 +81,6 @@ int main(int argc, char* argv[]) {
     }
     printl(hOutput, "\n");
 
-    yyjson_val* struc = NULL;
-    yyjson_val* structs = yyjson_obj_get(obj, "structs");
-    yyjson_arr_iter_init(structs, &iter);
-    while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-        const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
-        fprintf(hOutput, "typedef struct %s %s;\n", name, name);
-    }
-    printl(hOutput, "\n");
-
-    struc = NULL;
-    structs = yyjson_obj_get(obj, "callback_structs");
-    yyjson_arr_iter_init(structs, &iter);
-    while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-        const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
-        fprintf(hOutput, "typedef struct %s %s;\n", name, name);
-    }
-    printl(hOutput, "\n");
-
     yyjson_val* typedf = NULL;
     yyjson_val* typedefs = yyjson_obj_get(obj, "typedefs");
     yyjson_arr_iter_init(typedefs, &iter);
@@ -116,6 +99,80 @@ int main(int argc, char* argv[]) {
         } else
             fprintf(hOutput, "%s %s", type, name);
         printl(hOutput, ";\n");
+    }
+    printl(hOutput, "\n");
+
+    yyjson_val* struc = NULL;
+    yyjson_val* structs = yyjson_obj_get(obj, "callback_structs");
+    yyjson_arr_iter_init(structs, &iter);
+    while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
+        const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
+        fprintf(hOutput, "typedef struct %s %s;\n", name, name);
+    }
+    printl(hOutput, "\n");
+
+    struc = NULL;
+    structs = yyjson_obj_get(obj, "callback_structs");
+    yyjson_arr_iter_init(structs, &iter);
+    while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
+        const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
+
+        yyjson_val* enums = yyjson_obj_get(struc, "enums");
+        if (enums != NULL) {
+            yyjson_val* enm = NULL;
+            yyjson_arr_iter enm_iter;
+            yyjson_arr_iter_init(enums, &enm_iter);
+            while ((enm = yyjson_arr_iter_next(&enm_iter)) != NULL) {
+                const char* enum_name = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
+
+                fprintf(hOutput, "#ifndef __cplusplus\n");
+                fprintf(hOutput, "typedef enum32_t %s__%s;\n", name, enum_name);
+                fprintf(hOutput, "#endif\n");
+                fprintf(hOutput, "enum %s__%s {\n", name, enum_name);
+
+                yyjson_val* val = NULL;
+                yyjson_arr_iter val_iter;
+                yyjson_arr_iter_init(yyjson_obj_get(enm, "values"), &val_iter);
+                while ((val = yyjson_arr_iter_next(&val_iter)) != NULL) {
+                    const char* val_name = yyjson_get_str(yyjson_obj_get(val, "name"));
+                    const char* value = yyjson_get_str(yyjson_obj_get(val, "value"));
+                    fprintf(hOutput, "    %s = %s,\n", val_name, value);
+                }
+
+                fprintf(hOutput, "};\n");
+            }
+        }
+
+        yyjson_val* fields = yyjson_obj_get(struc, "fields");
+        if (fields == NULL || yyjson_arr_size(fields) == 0) {
+            fprintf(hOutput, "typedef struct %s %s;\n", name, name);
+        } else {
+            if (enums != NULL)
+                fprintf(hOutput, "\n");
+            fprintf(hOutput, "typedef struct %s {\n", name);
+
+            yyjson_val* fld = NULL;
+            yyjson_arr_iter fld_iter;
+            yyjson_arr_iter_init(fields, &fld_iter);
+            while ((fld = yyjson_arr_iter_next(&fld_iter)) != NULL) {
+                char field_type[1024];
+                strcpy_s(field_type, sizeof(field_type), yyjson_get_str(yyjson_obj_get(fld, "fieldtype")));
+
+                char* pos = strrchr(field_type, ':');
+                while (pos != NULL) {
+                    *pos = '_';
+                    pos = strrchr(field_type, ':');
+                }
+
+                const char* field_name = yyjson_get_str(yyjson_obj_get(fld, "fieldname"));
+                fprintf(hOutput, "    %s %s;\n", field_type, field_name);
+            }
+
+            fprintf(hOutput, "} %s;\n", name);
+        }
+
+        if (enums != NULL || fields != NULL)
+            fprintf(hOutput, "\n");
     }
 
     yyjson_doc_free(doc);
