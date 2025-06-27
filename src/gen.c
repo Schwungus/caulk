@@ -143,6 +143,7 @@ static void genTypedefs() {
     yyjson_val* sources[] = {
         yyjson_obj_get(ROOT_OBJ, "structs"),
         yyjson_obj_get(ROOT_OBJ, "callback_structs"),
+        yyjson_obj_get(ROOT_OBJ, "interfaces"),
     };
 
     for (size_t i = 0; i < LENGTH(sources); i++) {
@@ -150,7 +151,7 @@ static void genTypedefs() {
         yyjson_arr_iter_init(sources[i], &iter);
 
         while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-            const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
+            const char* parent = yyjson_get_str(yyjson_obj_get(struc, i == 2 ? "classname" : "struct"));
             fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
             genEnums(yyjson_obj_get(struc, "enums"), parent);
         }
@@ -236,6 +237,66 @@ static void genStructs() {
     }
 }
 
+static void genInterfaces() {
+    yyjson_val* intr = NULL;
+    yyjson_val* interfaces = yyjson_obj_get(ROOT_OBJ, "interfaces");
+    yyjson_arr_iter iter;
+    yyjson_arr_iter_init(interfaces, &iter);
+
+    while ((intr = yyjson_arr_iter_next(&iter)) != NULL) {
+        const char* name = yyjson_get_str(yyjson_obj_get(intr, "classname"));
+
+        yyjson_val* fields = yyjson_obj_get(intr, "fields");
+        fprintf(hOutput, "struct %s {\n", name);
+        if (yyjson_get_len(fields)) {
+            yyjson_val* fld = NULL;
+            yyjson_arr_iter fld_iter;
+            yyjson_arr_iter_init(fields, &fld_iter);
+            while ((fld = yyjson_arr_iter_next(&fld_iter)) != NULL) {
+                const char* name = yyjson_get_str(yyjson_obj_get(fld, "fieldname"));
+                const char* type = yyjson_get_str(yyjson_obj_get(fld, "fieldtype"));
+                bool private = yyjson_get_bool(yyjson_obj_get(fld, "private"));
+                printl(hOutput, INDENT);
+                genField(name, type, private);
+            }
+        } else {
+            fprintf(hOutput, INDENT "void* DUMMY;\n");
+        }
+        fprintf(hOutput, "};\n");
+
+        yyjson_val* methods = yyjson_obj_get(intr, "methods");
+        if (yyjson_get_len(methods)) {
+            fprintf(hOutput, "\n");
+            yyjson_val* met = NULL;
+            yyjson_arr_iter met_iter;
+            yyjson_arr_iter_init(methods, &met_iter);
+            while ((met = yyjson_arr_iter_next(&met_iter)) != NULL) {
+                const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+                const char* returns = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+                fprintf(hOutput, "%s %s(", parseType(returns), name);
+
+                yyjson_val* params = yyjson_obj_get(met, "params");
+                if (yyjson_get_len(params)) {
+                    yyjson_val* arg = NULL;
+                    yyjson_arr_iter arg_iter;
+                    yyjson_arr_iter_init(params, &arg_iter);
+                    while ((arg = yyjson_arr_iter_next(&arg_iter)) != NULL) {
+                        const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
+                        const char* type = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+                        fprintf(hOutput, "%s %s", parseType(type), name);
+                        if (yyjson_arr_iter_has_next(&arg_iter))
+                            fprintf(hOutput, ", ");
+                    }
+                }
+
+                fprintf(hOutput, ");\n");
+            }
+        }
+
+        printl(hOutput, "\n");
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 4)
         return EXIT_FAILURE;
@@ -259,13 +320,15 @@ int main(int argc, char* argv[]) {
     fprintf(hOutput, "typedef uint32_t enum32_t;\n");
     fprintf(hOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
     fprintf(hOutput, "typedef uint64_t CSteamID, CGameID;\n");
-    fprintf(hOutput, "typedef uint8_t bool;\n\n");
+    fprintf(hOutput, "typedef uint8_t bool;\n");
+    fprintf(hOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n\n");
 
     fprintf(cOutput, "#include \"__gen.h\"\n\n");
 
     genConsts();
     genTypedefs();
     genStructs();
+    genInterfaces();
 
     yyjson_doc_free(gDoc);
     fclose(hOutput);
