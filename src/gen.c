@@ -51,7 +51,7 @@ static const char* parseType(const char* weee) {
     static char buf[512];
     size_t i = 0;
     for (; i < strlen(weee); i++)
-        buf[i] = weee[i] == ':' ? '_' : weee[i];
+        buf[i] = weee[i] == ':' ? '_' : (weee[i] == '&' ? '*' : weee[i]);
     buf[i] = '\0';
     return buf;
 }
@@ -101,19 +101,19 @@ static void genEnums(yyjson_val* enums, const char* parent) {
     printl(hOutput, "\n");
 }
 
-static void genField(const char* name, const char* type) {
+static void genField(const char* name, const char* type, bool private) {
     char* offset = NULL;
 
     type = parseType(type);
     if ((offset = strstr(type, "(*)")) != NULL) {
         prints(hOutput, type, offset + 2 - type);
-        fprintf(hOutput, "%s%s", name, offset + 2);
+        fprintf(hOutput, "%s%s%s", private ? "__" : "", name, offset + 2);
     } else if ((offset = strstr(type, "[")) != NULL) {
         prints(hOutput, type, offset - 1 - type);
-        fprintf(hOutput, " %s%s", name, offset);
+        fprintf(hOutput, " %s%s%s", private ? "__" : "", name, offset);
     } else {
         fprintf(hOutput, "%s", type);
-        fprintf(hOutput, " %s", name);
+        fprintf(hOutput, " %s%s", private ? "__" : "", name);
     }
 
     printl(hOutput, ";\n");
@@ -165,7 +165,7 @@ static void genTypedefs() {
         const char* name = yyjson_get_str(yyjson_obj_get(typedf, "typedef"));
         const char* type = yyjson_get_str(yyjson_obj_get(typedf, "type"));
         printl(hOutput, "typedef ");
-        genField(name, type);
+        genField(name, type, false);
     }
     printl(hOutput, "\n");
 }
@@ -184,23 +184,52 @@ static void genStructs() {
         while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
             const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 
-            yyjson_val* fld = NULL;
             yyjson_val* fields = yyjson_obj_get(struc, "fields");
-
-            yyjson_arr_iter fld_iter;
-            yyjson_arr_iter_init(fields, &fld_iter);
-
             fprintf(hOutput, "struct %s {\n", name);
-            if (yyjson_get_len(fields))
+            if (yyjson_get_len(fields)) {
+                yyjson_val* fld = NULL;
+                yyjson_arr_iter fld_iter;
+                yyjson_arr_iter_init(fields, &fld_iter);
                 while ((fld = yyjson_arr_iter_next(&fld_iter)) != NULL) {
                     const char* name = yyjson_get_str(yyjson_obj_get(fld, "fieldname"));
                     const char* type = yyjson_get_str(yyjson_obj_get(fld, "fieldtype"));
+                    bool private = yyjson_get_bool(yyjson_obj_get(fld, "private"));
                     printl(hOutput, INDENT);
-                    genField(name, type);
+                    genField(name, type, private);
                 }
-            else
+            } else {
                 fprintf(hOutput, INDENT "void* DUMMY;\n");
+            }
             fprintf(hOutput, "};\n");
+
+            yyjson_val* methods = yyjson_obj_get(struc, "methods");
+            if (yyjson_get_len(methods)) {
+                fprintf(hOutput, "\n");
+                yyjson_val* met = NULL;
+                yyjson_arr_iter met_iter;
+                yyjson_arr_iter_init(methods, &met_iter);
+                while ((met = yyjson_arr_iter_next(&met_iter)) != NULL) {
+                    const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+                    const char* returns = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+                    fprintf(hOutput, "%s %s(", parseType(returns), name);
+
+                    yyjson_val* params = yyjson_obj_get(met, "params");
+                    if (yyjson_get_len(params)) {
+                        yyjson_val* arg = NULL;
+                        yyjson_arr_iter arg_iter;
+                        yyjson_arr_iter_init(params, &arg_iter);
+                        while ((arg = yyjson_arr_iter_next(&arg_iter)) != NULL) {
+                            const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
+                            const char* type = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+                            fprintf(hOutput, "%s %s", parseType(type), name);
+                            if (yyjson_arr_iter_has_next(&arg_iter))
+                                fprintf(hOutput, ", ");
+                        }
+                    }
+
+                    fprintf(hOutput, ");\n");
+                }
+            }
 
             printl(hOutput, "\n");
         }
