@@ -27,7 +27,7 @@ static FILE *hOutput = NULL, *cOutput = NULL;
 static yyjson_doc* gDoc;
 #define ROOT_OBJ (yyjson_doc_get_root(gDoc))
 
-static const char* uwu(const char* child, const char* parent) {
+static const char* prefixField(const char* child, const char* parent) {
     if (parent == NULL)
         return child;
 
@@ -47,7 +47,7 @@ static const char* uwu(const char* child, const char* parent) {
     return buf;
 }
 
-static const char* owo(const char* weee) {
+static const char* parseType(const char* weee) {
     static char buf[512];
     size_t i = 0;
     for (; i < strlen(weee); i++)
@@ -56,18 +56,18 @@ static const char* owo(const char* weee) {
     return buf;
 }
 
-static void precumEnum(FILE* out, yyjson_val* enm, const char* parent) {
+static void defineEnum(FILE* out, yyjson_val* enm, const char* parent) {
     const char* child = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
-    const char* name = uwu(child, parent);
+    const char* name = prefixField(child, parent);
 
     fprintf(hOutput, "#ifndef __cplusplus\n");
     fprintf(hOutput, "typedef enum32_t %s;\n", name);
     fprintf(hOutput, "#endif\n");
 }
 
-static void ejacEnum(FILE* out, yyjson_val* enm, const char* parent) {
+static void fillEnum(FILE* out, yyjson_val* enm, const char* parent) {
     const char* child = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
-    const char* name = uwu(child, parent);
+    const char* name = prefixField(child, parent);
 
     fprintf(out, "enum %s {\n", name);
 
@@ -84,7 +84,7 @@ static void ejacEnum(FILE* out, yyjson_val* enm, const char* parent) {
     fprintf(out, "};\n\n");
 }
 
-static void impregEnums(yyjson_val* enums, const char* parent) {
+static void genEnums(yyjson_val* enums, const char* parent) {
     if (!yyjson_get_len(enums))
         return;
 
@@ -94,17 +94,17 @@ static void impregEnums(yyjson_val* enums, const char* parent) {
     yyjson_arr_iter_init(enums, &iter);
 
     while ((enm = yyjson_arr_iter_next(&iter)) != NULL) {
-        precumEnum(hOutput, enm, parent);
-        ejacEnum(hOutput, enm, parent);
+        defineEnum(hOutput, enm, parent);
+        fillEnum(hOutput, enm, parent);
     }
 
     printl(hOutput, "\n");
 }
 
-static void spitField(const char* name, const char* type) {
+static void genField(const char* name, const char* type) {
     char* offset = NULL;
 
-    type = owo(type);
+    type = parseType(type);
     if ((offset = strstr(type, "(*)")) != NULL) {
         prints(hOutput, type, offset + 2 - type);
         fprintf(hOutput, "%s%s", name, offset + 2);
@@ -119,7 +119,7 @@ static void spitField(const char* name, const char* type) {
     printl(hOutput, ";\n");
 }
 
-static void constipate() {
+static void genConsts() {
     yyjson_arr_iter iter;
 
     yyjson_val* cnst = NULL;
@@ -136,8 +136,8 @@ static void constipate() {
     printl(hOutput, "\n");
 }
 
-static void precum() {
-    impregEnums(yyjson_obj_get(ROOT_OBJ, "enums"), NULL);
+static void genTypedefs() {
+    genEnums(yyjson_obj_get(ROOT_OBJ, "enums"), NULL);
 
     yyjson_arr_iter iter;
     yyjson_val* sources[] = {
@@ -152,7 +152,7 @@ static void precum() {
         while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
             const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
             fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
-            impregEnums(yyjson_obj_get(struc, "enums"), parent);
+            genEnums(yyjson_obj_get(struc, "enums"), parent);
         }
     }
     printl(hOutput, "\n");
@@ -165,12 +165,12 @@ static void precum() {
         const char* name = yyjson_get_str(yyjson_obj_get(typedf, "typedef"));
         const char* type = yyjson_get_str(yyjson_obj_get(typedf, "type"));
         printl(hOutput, "typedef ");
-        spitField(name, type);
+        genField(name, type);
     }
     printl(hOutput, "\n");
 }
 
-static void strunc() {
+static void genStructs() {
     yyjson_arr_iter iter;
     yyjson_val* sources[] = {
         yyjson_obj_get(ROOT_OBJ, "structs"),
@@ -196,7 +196,7 @@ static void strunc() {
                     const char* name = yyjson_get_str(yyjson_obj_get(fld, "fieldname"));
                     const char* type = yyjson_get_str(yyjson_obj_get(fld, "fieldtype"));
                     printl(hOutput, INDENT);
-                    spitField(name, type);
+                    genField(name, type);
                 }
             else
                 fprintf(hOutput, INDENT "void* DUMMY;\n");
@@ -234,9 +234,9 @@ int main(int argc, char* argv[]) {
 
     fprintf(cOutput, "#include \"__gen.h\"\n\n");
 
-    constipate();
-    precum();
-    strunc();
+    genConsts();
+    genTypedefs();
+    genStructs();
 
     yyjson_doc_free(gDoc);
     fclose(hOutput);
