@@ -7,6 +7,10 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
 
+[*.{c,h}]
+indent_size = 8
+indent_style = tab
+
 [*.{md,json}]
 indent_size = 4
 

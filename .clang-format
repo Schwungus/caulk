@@ -1,6 +1,6 @@
 ColumnLimit: 120
-IndentWidth: 4
-UseTab: Never
+IndentWidth: 8
+UseTab: Always
 BreakBeforeBraces: Attach
 DerivePointerAlignment: false
 PointerAlignment: Left
