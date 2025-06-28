@@ -186,11 +186,12 @@ static void genConsts() {
 static void genTypedefs() {
 	writeEnums(yyjson_obj_get(ROOT_OBJ, "enums"), NULL);
 
+#define SPECIAL (2)
 	yyjson_arr_iter iter;
 	yyjson_val* sources[] = {
 	    yyjson_obj_get(ROOT_OBJ, "structs"),
 	    yyjson_obj_get(ROOT_OBJ, "callback_structs"),
-	    yyjson_obj_get(ROOT_OBJ, "interfaces"),
+	    [SPECIAL] = yyjson_obj_get(ROOT_OBJ, "interfaces"),
 	};
 
 	for (size_t i = 0; i < LENGTH(sources); i++) {
@@ -198,13 +199,15 @@ static void genTypedefs() {
 		yyjson_arr_iter_init(sources[i], &iter);
 
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-			const char* parent = yyjson_get_str(yyjson_obj_get(struc, i == 2 ? "classname" : "struct"));
+			const char* parent = i == SPECIAL ? "classname" : "struct";
+			parent = yyjson_get_str(yyjson_obj_get(struc, parent));
 			fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
 			writeEnums(yyjson_obj_get(struc, "enums"), parent);
 		}
 
 		printl(hOutput, "\n");
 	}
+#undef SPECIAL
 
 	yyjson_val* typedf = NULL;
 	yyjson_val* typedefs = yyjson_obj_get(ROOT_OBJ, "typedefs");
