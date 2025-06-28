@@ -51,7 +51,12 @@ static const char* parseType(const char* weee) {
     static char buf[512];
     size_t i = 0;
     for (; i < strlen(weee); i++)
-        buf[i] = weee[i] == ':' ? '_' : (weee[i] == '&' ? '*' : weee[i]);
+        if (weee[i] == ':')
+            buf[i] = '_';
+        else if (weee[i] == '&')
+            buf[i] = '*';
+        else
+            buf[i] = weee[i];
     buf[i] = '\0';
     return buf;
 }
