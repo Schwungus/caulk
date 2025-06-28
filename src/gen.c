@@ -4,7 +4,7 @@
 
 #include "yyjson.h"
 
-#define INDENT "    "
+#define INDENT "\t"
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
 static void prints(FILE* file, const char* str, size_t len) {
