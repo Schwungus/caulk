@@ -2,12 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <yyjson.h>
+#include "yyjson.h"
 
-#define BUF_MAX (2048)
-#define ARGS_MAX (128)
 #define INDENT "    "
-
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
 static void prints(FILE* file, const char* str, size_t len) {
