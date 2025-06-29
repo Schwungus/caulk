@@ -266,6 +266,9 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 	else
 		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", mastName, metName);
 
+	if (count)
+		fprintf(cOutput, "\n");
+
 	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
@@ -274,17 +277,22 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 		for (size_t i = 0; i < strlen(pType0); i++)
 			if (pType0[i] == '&')
 				fprintf(cOutput, "*");
-		fprintf(cOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
+		fprintf(cOutput, INDENT INDENT "*reinterpret_cast<%s*>(__%s)", pType, pName);
 
 		if (idx++ < count - 1)
-			fprintf(cOutput, ", ");
+			fprintf(cOutput, ", \n");
+		else
+			fprintf(cOutput, "\n");
 	}
+	if (count)
+		fprintf(cOutput, INDENT ");\n");
+	else
+		fprintf(cOutput, ");\n");
 
-	printl(cOutput, ");\n");
 	if (!retVoid)
 		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");", prefixUserType(metType));
 
-	printl(cOutput, "\n}\n\n");
+	fprintf(cOutput, "\n}\n\n");
 }
 
 static void genMethods(yyjson_val* master) {
