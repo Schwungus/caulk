@@ -64,12 +64,14 @@ static const char* sanitizeType(const char* weee) {
 
 static const char* prefixUserType(const char* type) {
 	static char buf[1024] = {0};
+	static const char* noops[] = {"unsigned ", "int ", "intptr", "int32", "int64",	"int ",
+				      "char",	   "void", "bool",   "float", "double", "size_t"};
 
-	if (strstr(type, "unsigned ") || strstr(type, "int") || strstr(type, "char") || strstr(type, "void") ||
-	    strstr(type, "bool") || strstr(type, "float") || strstr(type, "double") || strstr(type, "size_t")) {
-		strcpy(buf, type);
-		return buf;
-	}
+	if (!strcmp(type, "int"))
+		goto noop;
+	for (size_t i = 0; i < LENGTH(noops); i++)
+		if (strstr(type, noops[i]))
+			goto noop;
 
 	char* dest = buf;
 	if (strstr(type, "const ") != NULL) {
@@ -81,6 +83,10 @@ static const char* prefixUserType(const char* type) {
 	dest += strlen(PREFIX);
 	strcpy(dest, type);
 
+	return buf;
+
+noop:
+	strcpy(buf, type);
 	return buf;
 }
 
@@ -138,19 +144,14 @@ static void writeDecl(FILE* out, const char* name, const char* type, bool privat
 }
 
 static void writeFields(FILE* out, yyjson_val* fields) {
-	if (!yyjson_get_len(fields)) {
-		printl(out, INDENT "void* DUMMY;\n");
-		return;
-	}
+	yyjson_arr_iter iter;
+	yyjson_arr_iter_init(fields, &iter);
 
-	yyjson_arr_iter fld_iter;
-	yyjson_arr_iter_init(fields, &fld_iter);
-
-	yyjson_val* fld = NULL;
-	while ((fld = yyjson_arr_iter_next(&fld_iter)) != NULL) {
-		const char* name = yyjson_get_str(yyjson_obj_get(fld, "fieldname"));
-		const char* type = yyjson_get_str(yyjson_obj_get(fld, "fieldtype"));
-		bool private = yyjson_get_bool(yyjson_obj_get(fld, "private"));
+	yyjson_val* field = NULL;
+	while ((field = yyjson_arr_iter_next(&iter)) != NULL) {
+		const char* name = yyjson_get_str(yyjson_obj_get(field, "fieldname"));
+		const char* type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
+		bool private = yyjson_get_bool(yyjson_obj_get(field, "private"));
 		printl(out, INDENT);
 		writeDecl(out, name, sanitizeType(type), private);
 		printl(out, ";\n");
@@ -164,13 +165,14 @@ static void writeParams(FILE* out, yyjson_val* params) {
 	yyjson_val* arg = NULL;
 	while ((arg = yyjson_arr_iter_next(&arg_iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
-		const char* type = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		const char* type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
-		type = sanitizeType(type);
+		char type[1024];
+		strcpy(type, sanitizeType(type0));
 		if (out == cOutput)
-			type = prefixUserType(type);
-		fprintf(out, "%s %s", type, name);
+			strcpy(type, prefixUserType(type));
 
+		fprintf(out, "%s %s", type, name);
 		if (yyjson_arr_iter_has_next(&arg_iter))
 			fprintf(out, ", ");
 	}
@@ -196,6 +198,7 @@ static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
 		strcpy(retType, deezType);
 	else
 		strcpy(retType, yyjson_get_str(yyjson_obj_get(met, "returntype")));
+
 	if (out == cOutput) {
 		strcpy(deezType, prefixUserType(deezType));
 		strcpy(retType, prefixUserType(retType));
@@ -238,8 +241,12 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 
 	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
-		const char* pType = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
-		fprintf(cOutput, INDENT "%s* __%s = &%s;\n", prefixUserType(sanitizeType(pType)), pName, pName);
+		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+
+		char pType[1024] = {0};
+		strcpy(pType, prefixUserType(sanitizeType(pType0)));
+
+		fprintf(cOutput, INDENT "%s* __%s = &%s;\n", pType, pName, pName);
 	}
 
 	yyjson_arr_iter_init(params, &iter);
@@ -262,7 +269,9 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
-		const char* pType = sanitizeType(pType0);
+
+		char pType[1024] = {0};
+		strcpy(pType, sanitizeType(pType0));
 
 		fprintf(cOutput, INDENT INDENT);
 		for (size_t i = 0; i < strlen(pType0); i++)
@@ -288,9 +297,8 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 
 static void genMethods(yyjson_val* master) {
 	static const char* ignore[] = {
-	    "SetDualSenseTriggerEffect",
-	    "SteamAPI_ISteamNetworkingSockets_",
-	    "ISteamHTML",
+	    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
+	    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
 	};
 	yyjson_val* methods = yyjson_obj_get(master, "methods");
 
@@ -342,10 +350,16 @@ static void genTypedefs() {
 		yyjson_arr_iter_init(sources[i], &iter);
 
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
-			const char* parent = i == SPECIAL ? "classname" : "struct";
-			parent = yyjson_get_str(yyjson_obj_get(struc, parent));
-			fprintf(hOutput, "struct %s;\n", parent);
-			fprintf(hOutput, "#ifndef __cplusplus\ntypedef struct %s %s;\n#endif\n", parent, parent);
+			const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
+			if (i == SPECIAL) {
+				parent = yyjson_get_str(yyjson_obj_get(struc, "classname"));
+				fprintf(hOutput, "typedef void* %s;\n", parent);
+			} else {
+				fprintf(hOutput, "struct %s;\n", parent);
+				fprintf(hOutput, "#ifndef __cplusplus\n");
+				fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
+				fprintf(hOutput, "#endif\n");
+			}
 			genEnums(yyjson_obj_get(struc, "enums"), parent);
 		}
 
@@ -369,11 +383,16 @@ static void genTypedefs() {
 
 static void genStruct(yyjson_val* struc) {
 	const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
+	if (name == NULL)
+		name = yyjson_get_str(yyjson_obj_get(struc, "classname"));
+
 	yyjson_val* fields = yyjson_obj_get(struc, "fields");
 
-	fprintf(hOutput, "struct %s {\n", name);
-	writeFields(hOutput, fields);
-	fprintf(hOutput, "};\n");
+	if (yyjson_get_len(fields)) {
+		fprintf(hOutput, "struct %s {\n", name);
+		writeFields(hOutput, fields);
+		fprintf(hOutput, "};\n");
+	}
 
 	yyjson_val* methods = yyjson_obj_get(struc, "methods");
 	if (yyjson_get_len(methods)) {
@@ -408,16 +427,7 @@ static void genInterfaces() {
 	yyjson_arr_iter_init(interfaces, &iter);
 
 	while ((intr = yyjson_arr_iter_next(&iter)) != NULL) {
-		const char* name = yyjson_get_str(yyjson_obj_get(intr, "classname"));
-
-		yyjson_val* fields = yyjson_obj_get(intr, "fields");
-		fprintf(hOutput, "struct %s {\n", name);
-		writeFields(hOutput, fields);
-		fprintf(hOutput, "};\n");
-
-		yyjson_val* methods = yyjson_obj_get(intr, "methods");
-		genMethods(intr);
-
+		genStruct(intr);
 		printl(hOutput, "\n");
 	}
 }
