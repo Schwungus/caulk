@@ -6,6 +6,7 @@
     "clangd.enableCodeCompletion": true,
     "cmake.generator": "Ninja",
     "cmake.exportCompileCommandsFile": true,
+    "cSpell.words": ["enumname"],
     "files.exclude": {
         ".cache": true
     },
