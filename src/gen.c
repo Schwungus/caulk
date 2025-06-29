@@ -153,16 +153,28 @@ static void writeParams(yyjson_val* params) {
 }
 
 static void writeMethods(yyjson_val* methods) {
-	yyjson_arr_iter met_iter;
-	yyjson_arr_iter_init(methods, &met_iter);
+	static const char* fuckThese[] = {
+	    "SetDualSenseTriggerEffect",
+	    "SteamAPI_ISteamNetworkingSockets_",
+	};
+
+	yyjson_arr_iter iter;
+	yyjson_arr_iter_init(methods, &iter);
 
 	yyjson_val* met = NULL;
-	while ((met = yyjson_arr_iter_next(&met_iter)) != NULL) {
+	while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+		for (size_t i = 0; i < LENGTH(fuckThese); i++)
+			if (strstr(name, fuckThese[i]) != NULL)
+				goto next;
+
 		const char* returns = yyjson_get_str(yyjson_obj_get(met, "returntype"));
 		fprintf(hOutput, "%s %s(", sanitizeType(returns), name);
 		writeParams(yyjson_obj_get(met, "params"));
 		fprintf(hOutput, ");\n");
+
+	next:
+		continue;
 	}
 }
 
