@@ -5,9 +5,9 @@
 #include "yyjson.h"
 
 #define INDENT "\t"
-#define THIS "deez"
+#define THIS "__THIS"
 #define PREFIX "caulk::"
-#define RESULT "__GAY"
+#define RESULT "__RESULT"
 
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
@@ -291,7 +291,7 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 }
 
 static void genMethods(yyjson_val* master) {
-	static const char* fuckThese[] = {
+	static const char* ignore[] = {
 	    "SetDualSenseTriggerEffect",
 	    "SteamAPI_ISteamNetworkingSockets_",
 	    "ISteamHTML",
@@ -304,8 +304,8 @@ static void genMethods(yyjson_val* master) {
 	yyjson_val* met = NULL;
 	while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-		for (size_t i = 0; i < LENGTH(fuckThese); i++)
-			if (strstr(name, fuckThese[i]) != NULL)
+		for (size_t i = 0; i < LENGTH(ignore); i++)
+			if (strstr(name, ignore[i]) != NULL)
 				goto next;
 		genWrapper(master, met);
 	next:
