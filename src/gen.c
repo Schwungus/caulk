@@ -65,8 +65,8 @@ static const char* sanitizeType(const char* weee) {
 static const char* prefixUserType(const char* type) {
 	static char buf[1024] = {0};
 
-	if (strstr(type, "unsigned ") || strstr(type, "int16") || strstr(type, "int32") || strstr(type, "char") ||
-	    strstr(type, "void") || strstr(type, "bool")) {
+	if (strstr(type, "unsigned ") || strstr(type, "int") || strstr(type, "char") || strstr(type, "void") ||
+	    strstr(type, "bool") || strstr(type, "float") || strstr(type, "double") || strstr(type, "size_t")) {
 		strcpy(buf, type);
 		return buf;
 	}
@@ -127,11 +127,10 @@ static void writeDecl(FILE* out, const char* name, const char* type, bool privat
 	char* offset = NULL;
 
 	char tBuf[1024] = {0}, *dest = tBuf;
-	if (out == cOutput) {
-		strcpy(dest, PREFIX);
-		dest += strlen(PREFIX);
-	}
-	strcpy(dest, sanitizeType(type));
+	type = sanitizeType(type);
+	if (out == cOutput)
+		type = prefixUserType(type);
+	strcpy(dest, type);
 
 	if ((offset = strstr(tBuf, "(*)")) != NULL) {
 		prints(out, tBuf, offset + 2 - tBuf);
@@ -200,17 +199,12 @@ static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
 	const char* fType = NULL;
 
 	char mBuf[1024] = {0}, consBuf[1024] = {0};
-	strcpy(mBuf, sanitizeType(structName(tMaster)));
-
-	if (isConstructor(met)) {
-		if (out == cOutput)
-			strcpy(consBuf, prefixUserType(mBuf));
-		else
-			strcpy(consBuf, mBuf);
-		fType = consBuf;
-	} else {
-		fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
-	}
+	strcpy(
+	    mBuf,
+	    sanitizeType(isConstructor(met) ? structName(tMaster) : yyjson_get_str(yyjson_obj_get(met, "returntype")))
+	);
+	strcpy(consBuf, out == cOutput ? prefixUserType(mBuf) : mBuf);
+	fType = consBuf;
 
 	size_t i = strlen(mBuf);
 	mBuf[i++] = '*';
@@ -274,10 +268,11 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 		const char* pType = sanitizeType(pType0);
 
+		fprintf(cOutput, INDENT INDENT);
 		for (size_t i = 0; i < strlen(pType0); i++)
 			if (pType0[i] == '&')
 				fprintf(cOutput, "*");
-		fprintf(cOutput, INDENT INDENT "*reinterpret_cast<%s*>(__%s)", pType, pName);
+		fprintf(cOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
 
 		if (idx++ < count - 1)
 			fprintf(cOutput, ", \n");
