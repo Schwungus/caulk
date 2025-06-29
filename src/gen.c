@@ -7,6 +7,7 @@
 #define INDENT "\t"
 #define THIS "deez"
 #define PREFIX "caulk::"
+#define RESULT "__GAY"
 
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
@@ -58,6 +59,28 @@ static const char* sanitizeType(const char* weee) {
 		else
 			buf[i] = weee[i];
 	buf[i] = '\0';
+	return buf;
+}
+
+static const char* prefixUserType(const char* type) {
+	static char buf[1024] = {0};
+
+	if (strstr(type, "unsigned ") || strstr(type, "int16") || strstr(type, "int32") || strstr(type, "char") ||
+	    strstr(type, "void") || strstr(type, "bool")) {
+		strcpy(buf, type);
+		return buf;
+	}
+
+	char* dest = buf;
+	if (strstr(type, "const ") != NULL) {
+		strcpy(buf, "const ");
+		dest = buf + strlen("const ");
+		type += strlen("const ");
+	}
+	strcpy(dest, PREFIX);
+	dest += strlen(PREFIX);
+	strcpy(dest, type);
+
 	return buf;
 }
 
@@ -150,7 +173,12 @@ static void writeParams(FILE* out, yyjson_val* params) {
 	while ((arg = yyjson_arr_iter_next(&arg_iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* type = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
-		fprintf(out, "%s %s", sanitizeType(type), name);
+
+		type = sanitizeType(type);
+		if (out == cOutput)
+			type = prefixUserType(type);
+		fprintf(out, "%s %s", type, name);
+
 		if (yyjson_arr_iter_has_next(&arg_iter))
 			fprintf(out, ", ");
 	}
@@ -163,12 +191,26 @@ static const char* structName(yyjson_val* type) {
 	return master;
 }
 
+static int isConstructor(yyjson_val* met) {
+	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
+}
+
 static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
 	const char* fName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-	const char* fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+	const char* fType = NULL;
 
-	char mBuf[1024] = {0};
+	char mBuf[1024] = {0}, consBuf[1024] = {0};
 	strcpy(mBuf, sanitizeType(structName(tMaster)));
+
+	if (isConstructor(met)) {
+		if (out == cOutput)
+			strcpy(consBuf, prefixUserType(mBuf));
+		else
+			strcpy(consBuf, mBuf);
+		fType = consBuf;
+	} else {
+		fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+	}
 
 	size_t i = strlen(mBuf);
 	mBuf[i++] = '*';
@@ -186,28 +228,63 @@ static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
 }
 
 static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
-	const char* fName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-	const char* fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
-	const char* mName = structName(tMaster);
+	const char* mastName = structName(tMaster);
+	const char* metName = yyjson_get_str(yyjson_obj_get(met, "methodname"));
+	const char* metType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
 
 	writeMethodSign(hOutput, tMaster, met);
 	printl(hOutput, ";\n");
 
 	writeMethodSign(cOutput, tMaster, met);
-	printl(cOutput, " {\n" INDENT "\n");
+	printl(cOutput, " {\n");
 
 	yyjson_val* params = yyjson_obj_get(met, "params");
+	if (isConstructor(met))
+		metType = mastName;
 
+	yyjson_val* arg = NULL;
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(params, &iter);
 
-	yyjson_val* arg = NULL;
 	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		fprintf(cOutput, INDENT "%s* __%s = &%s;\n", prefixUserType(sanitizeType(pType)), pName, pName);
 	}
 
-	printl(cOutput, "}\n\n");
+	yyjson_arr_iter_init(params, &iter);
+	size_t count = yyjson_get_len(params), idx = 0;
+	int retVoid = !strcmp(metType, "void");
+
+	if (retVoid)
+		printl(cOutput, INDENT);
+	else
+		fprintf(cOutput, INDENT "%s " RESULT " = ", metType);
+
+	if (isConstructor(met))
+		fprintf(cOutput, "%s(", metType);
+	else
+		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", mastName, metName);
+
+	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
+		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
+		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		const char* pType = sanitizeType(pType0);
+
+		for (size_t i = 0; i < strlen(pType0); i++)
+			if (pType0[i] == '&')
+				fprintf(cOutput, "*");
+		fprintf(cOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
+
+		if (idx++ < count - 1)
+			fprintf(cOutput, ", ");
+	}
+
+	printl(cOutput, ");\n");
+	if (!retVoid)
+		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");", prefixUserType(metType));
+
+	printl(cOutput, "\n}\n\n");
 }
 
 static void genMethods(yyjson_val* master) {
