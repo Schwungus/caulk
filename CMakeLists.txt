@@ -50,34 +50,33 @@ add_custom_command(
     VERBATIM)
 
 set(LIB_NAME ${PROJECT_NAME})
-add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${GEN_H_OUT} ${GEN_C_OUT})
+add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
 add_dependencies(${LIB_NAME} ${GEN_NAME})
 set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(${LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(
     ${LIB_NAME}
-    PUBLIC ${SRC_DIR}
-    PRIVATE ${RAW_INCLUDE_DIR} ${RAW_INCLUDE_DIR}/steam
-    INTERFACE ${GEN_OUT_DIR})
+    PUBLIC ${SRC_DIR} ${RAW_INCLUDE_DIR} ${GEN_OUT_DIR}
+    PRIVATE ${RAW_INCLUDE_DIR}/steam)
 
 set(TEST_NAME ${PROJECT_NAME}Test)
 add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
+set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(${TEST_NAME} ${LIB_NAME})
 
-if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-    if(WIN32)
-
-    elseif(LINUX)
-
-    else()
-
+set(DYLIB_ROOT ${RAW_ROOT}/redistributable_bin)
+if(WIN32)
+    set(STEAM_LIB "win64/steam_api64")
+    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+        set(STEAM_LIB "steam_api")
     endif()
+    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
+elseif(LINUX)
+    set(STEAM_LIB "linux64")
+    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+        set(STEAM_LIB "linux32")
+    endif()
+    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
 else()
-    if(WIN32)
-
-    elseif(LINUX)
-
-    else()
-
-    endif()
+    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
 endif()

@@ -6,6 +6,9 @@ extern "C" {
 
 #include "__gen.h"
 
+bool SteamAPI_Init();
+void SteamAPI_Shutdown();
+
 #ifdef __cplusplus
 }
 #endif
