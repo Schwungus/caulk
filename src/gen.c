@@ -285,9 +285,9 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 		fprintf(cOutput, ");\n");
 
 	if (!retVoid)
-		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");", prefixUserType(metType));
+		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(metType));
 
-	fprintf(cOutput, "\n}\n\n");
+	fprintf(cOutput, "}\n\n");
 }
 
 static void genMethods(yyjson_val* master) {
@@ -444,6 +444,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 
 	fprintf(hOutput, "#pragma once\n\n");
+	fprintf(hOutput, "#include <stddef.h>\n");
 	fprintf(hOutput, "#include <stdint.h>\n\n");
 
 	fprintf(hOutput, "typedef uint32_t enum32_t;\n");
