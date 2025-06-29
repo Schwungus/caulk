@@ -5,6 +5,9 @@
 #include "yyjson.h"
 
 #define INDENT "\t"
+#define THIS "deez"
+#define PREFIX "caulk::"
+
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
 static void prints(FILE* file, const char* str, size_t len) {
@@ -58,19 +61,15 @@ static const char* sanitizeType(const char* weee) {
 	return buf;
 }
 
-static void defineEnum(yyjson_val* enm, const char* parent) {
-	const char* child = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
-	const char* name = fieldName(child, parent);
-
+static void defineEnum(yyjson_val* enm, const char* master) {
+	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
 	fprintf(hOutput, "#ifndef __cplusplus\n");
 	fprintf(hOutput, "typedef enum32_t %s;\n", name);
 	fprintf(hOutput, "#endif\n");
 }
 
-static void fillEnum(yyjson_val* enm, const char* parent) {
-	const char* child = yyjson_get_str(yyjson_obj_get(enm, "enumname"));
-	const char* name = fieldName(child, parent);
-
+static void fillEnum(yyjson_val* enm, const char* master) {
+	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
 	fprintf(hOutput, "enum %s {\n", name);
 
 	yyjson_val* val = NULL;
@@ -86,15 +85,15 @@ static void fillEnum(yyjson_val* enm, const char* parent) {
 	fprintf(hOutput, "};\n\n");
 }
 
-static void genEnums(yyjson_val* enums, const char* parent) {
+static void genEnums(yyjson_val* enums, const char* master) {
 	yyjson_arr_iter iter;
 	yyjson_val* enm = NULL;
 
 	yyjson_arr_iter_init(enums, &iter);
 
 	while ((enm = yyjson_arr_iter_next(&iter)) != NULL) {
-		defineEnum(enm, parent);
-		fillEnum(enm, parent);
+		defineEnum(enm, master);
+		fillEnum(enm, master);
 	}
 
 	if (yyjson_get_len(enums))
@@ -104,19 +103,23 @@ static void genEnums(yyjson_val* enums, const char* parent) {
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
 	char* offset = NULL;
 
-	type = sanitizeType(type);
-	if ((offset = strstr(type, "(*)")) != NULL) {
-		prints(out, type, offset + 2 - type);
+	char tBuf[1024] = {0}, *dest = tBuf;
+	if (out == cOutput) {
+		strcpy(dest, PREFIX);
+		dest += strlen(PREFIX);
+	}
+	strcpy(dest, sanitizeType(type));
+
+	if ((offset = strstr(tBuf, "(*)")) != NULL) {
+		prints(out, tBuf, offset + 2 - tBuf);
 		fprintf(out, "%s%s%s", private ? "__" : "", name, offset + 2);
-	} else if ((offset = strstr(type, "[")) != NULL) {
-		prints(out, type, offset - 1 - type);
+	} else if ((offset = strstr(tBuf, "[")) != NULL) {
+		prints(out, tBuf, offset - 1 - tBuf);
 		fprintf(out, " %s%s%s", private ? "__" : "", name, offset);
 	} else {
-		fprintf(out, "%s", type);
+		fprintf(out, "%s", tBuf);
 		fprintf(out, " %s%s", private ? "__" : "", name);
 	}
-
-	printl(out, ";\n");
 }
 
 static void writeFields(FILE* out, yyjson_val* fields) {
@@ -135,6 +138,7 @@ static void writeFields(FILE* out, yyjson_val* fields) {
 		bool private = yyjson_get_bool(yyjson_obj_get(fld, "private"));
 		printl(out, INDENT);
 		writeDecl(out, name, type, private);
+		printl(out, ";\n");
 	}
 }
 
@@ -152,11 +156,67 @@ static void writeParams(FILE* out, yyjson_val* params) {
 	}
 }
 
-static void genMethods(yyjson_val* methods) {
+static const char* structName(yyjson_val* type) {
+	const char* master = yyjson_get_str(yyjson_obj_get(type, "struct"));
+	if (master == NULL)
+		master = yyjson_get_str(yyjson_obj_get(type, "classname"));
+	return master;
+}
+
+static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
+	const char* fName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+	const char* fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+
+	char mBuf[1024] = {0};
+	strcpy(mBuf, sanitizeType(structName(tMaster)));
+
+	size_t i = strlen(mBuf);
+	mBuf[i++] = '*';
+	mBuf[i++] = '\0';
+
+	fprintf(out, "%s %s(", fType, fName);
+	writeDecl(out, THIS, mBuf, false);
+
+	yyjson_val* params = yyjson_obj_get(met, "params");
+	if (yyjson_get_len(params))
+		printl(out, ", ");
+	writeParams(out, params);
+
+	fprintf(out, ")");
+}
+
+static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
+	const char* fName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+	const char* fType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+	const char* mName = structName(tMaster);
+
+	writeMethodSign(hOutput, tMaster, met);
+	printl(hOutput, ";\n");
+
+	writeMethodSign(cOutput, tMaster, met);
+	printl(cOutput, " {\n" INDENT "\n");
+
+	yyjson_val* params = yyjson_obj_get(met, "params");
+
+	yyjson_arr_iter iter;
+	yyjson_arr_iter_init(params, &iter);
+
+	yyjson_val* arg = NULL;
+	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
+		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
+		const char* pType = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+	}
+
+	printl(cOutput, "}\n\n");
+}
+
+static void genMethods(yyjson_val* master) {
 	static const char* fuckThese[] = {
 	    "SetDualSenseTriggerEffect",
 	    "SteamAPI_ISteamNetworkingSockets_",
+	    "ISteamHTML",
 	};
+	yyjson_val* methods = yyjson_obj_get(master, "methods");
 
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(methods, &iter);
@@ -167,12 +227,7 @@ static void genMethods(yyjson_val* methods) {
 		for (size_t i = 0; i < LENGTH(fuckThese); i++)
 			if (strstr(name, fuckThese[i]) != NULL)
 				goto next;
-
-		const char* returns = yyjson_get_str(yyjson_obj_get(met, "returntype"));
-		fprintf(hOutput, "%s %s(", sanitizeType(returns), name);
-		writeParams(hOutput, yyjson_obj_get(met, "params"));
-		fprintf(hOutput, ");\n");
-
+		genWrapper(master, met);
 	next:
 		continue;
 	}
@@ -213,7 +268,8 @@ static void genTypedefs() {
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
 			const char* parent = i == SPECIAL ? "classname" : "struct";
 			parent = yyjson_get_str(yyjson_obj_get(struc, parent));
-			fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
+			fprintf(hOutput, "struct %s;\n", parent);
+			fprintf(hOutput, "#ifndef __cplusplus\ntypedef struct %s %s;\n#endif\n", parent, parent);
 			genEnums(yyjson_obj_get(struc, "enums"), parent);
 		}
 
@@ -230,6 +286,7 @@ static void genTypedefs() {
 		const char* type = yyjson_get_str(yyjson_obj_get(typedf, "type"));
 		printl(hOutput, "typedef ");
 		writeDecl(hOutput, name, type, false);
+		printl(hOutput, ";\n");
 	}
 	printl(hOutput, "\n");
 }
@@ -245,7 +302,7 @@ static void genStruct(yyjson_val* struc) {
 	yyjson_val* methods = yyjson_obj_get(struc, "methods");
 	if (yyjson_get_len(methods)) {
 		fprintf(hOutput, "\n");
-		genMethods(methods);
+		genMethods(struc);
 	}
 }
 
@@ -270,6 +327,7 @@ static void genStructs() {
 static void genInterfaces() {
 	yyjson_val* intr = NULL;
 	yyjson_val* interfaces = yyjson_obj_get(ROOT_OBJ, "interfaces");
+
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(interfaces, &iter);
 
@@ -282,7 +340,7 @@ static void genInterfaces() {
 		fprintf(hOutput, "};\n");
 
 		yyjson_val* methods = yyjson_obj_get(intr, "methods");
-		genMethods(methods);
+		genMethods(intr);
 
 		printl(hOutput, "\n");
 	}
@@ -312,14 +370,22 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
 	fprintf(hOutput, "typedef uint64_t CSteamID, CGameID;\n");
 	fprintf(hOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n\n");
-	fprintf(hOutput, "#ifndef __cplusplus\ntypedef uint8_t bool;\n#endif\n");
+	fprintf(hOutput, "#ifndef __cplusplus\ntypedef uint8_t bool;\n#endif\n\n");
 
-	fprintf(cOutput, "#include \"__gen.h\"\n\n");
+	fprintf(cOutput, "#include \"steam_api.h\"\n\n");
+
+	fprintf(cOutput, "namespace caulk { extern \"C\" { \n");
+	fprintf(cOutput, INDENT "#include \"__gen.h\"\n");
+	fprintf(cOutput, "} }\n\n");
+
+	fprintf(cOutput, "extern \"C\" {\n\n");
 
 	genConsts();
 	genTypedefs();
 	genStructs();
 	genInterfaces();
+
+	fprintf(cOutput, "\n}\n\n");
 
 	yyjson_doc_free(gDoc);
 	fclose(hOutput);

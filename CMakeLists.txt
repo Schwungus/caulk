@@ -4,7 +4,7 @@ project(
     caulk
     VERSION 0.1.0
     DESCRIPTION "THE Steamworks API wrapper for use with plain C."
-    LANGUAGES C)
+    LANGUAGES C CXX)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -26,6 +26,10 @@ file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${raw_SOURCE_DIR})
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(RAW_ROOT ${raw_SOURCE_DIR}/sdk)
 set(RAW_INCLUDE_DIR ${RAW_ROOT}/public)
