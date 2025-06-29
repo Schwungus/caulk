@@ -125,21 +125,14 @@ static void genEnums(yyjson_val* enums, const char* master) {
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
 	char* offset = NULL;
-
-	char tBuf[1024] = {0}, *dest = tBuf;
-	type = sanitizeType(type);
-	if (out == cOutput)
-		type = prefixUserType(type);
-	strcpy(dest, type);
-
-	if ((offset = strstr(tBuf, "(*)")) != NULL) {
-		prints(out, tBuf, offset + 2 - tBuf);
+	if ((offset = strstr(type, "(*)")) != NULL) {
+		prints(out, type, offset + 2 - type);
 		fprintf(out, "%s%s%s", private ? "__" : "", name, offset + 2);
-	} else if ((offset = strstr(tBuf, "[")) != NULL) {
-		prints(out, tBuf, offset - 1 - tBuf);
+	} else if ((offset = strstr(type, "[")) != NULL) {
+		prints(out, type, offset - 1 - type);
 		fprintf(out, " %s%s%s", private ? "__" : "", name, offset);
 	} else {
-		fprintf(out, "%s", tBuf);
+		fprintf(out, "%s", type);
 		fprintf(out, " %s%s", private ? "__" : "", name);
 	}
 }
@@ -159,7 +152,7 @@ static void writeFields(FILE* out, yyjson_val* fields) {
 		const char* type = yyjson_get_str(yyjson_obj_get(fld, "fieldtype"));
 		bool private = yyjson_get_bool(yyjson_obj_get(fld, "private"));
 		printl(out, INDENT);
-		writeDecl(out, name, type, private);
+		writeDecl(out, name, sanitizeType(type), private);
 		printl(out, ";\n");
 	}
 }
@@ -195,23 +188,26 @@ static int isConstructor(yyjson_val* met) {
 }
 
 static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
-	const char* fName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-	const char* fType = NULL;
+	const char* metName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+	char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
-	char mBuf[1024] = {0}, consBuf[1024] = {0};
-	strcpy(
-	    mBuf,
-	    sanitizeType(isConstructor(met) ? structName(tMaster) : yyjson_get_str(yyjson_obj_get(met, "returntype")))
-	);
-	strcpy(consBuf, out == cOutput ? prefixUserType(mBuf) : mBuf);
-	fType = consBuf;
+	strcpy(deezType, structName(tMaster));
+	if (isConstructor(met))
+		strcpy(retType, deezType);
+	else
+		strcpy(retType, yyjson_get_str(yyjson_obj_get(met, "returntype")));
+	if (out == cOutput) {
+		strcpy(deezType, prefixUserType(deezType));
+		strcpy(retType, prefixUserType(retType));
+	}
 
-	size_t i = strlen(mBuf);
-	mBuf[i++] = '*';
-	mBuf[i++] = '\0';
+	strcpy(deezPtr, deezType);
+	size_t i = strlen(deezPtr);
+	deezPtr[i++] = '*';
+	deezPtr[i++] = '\0';
 
-	fprintf(out, "%s %s(", fType, fName);
-	writeDecl(out, THIS, mBuf, false);
+	fprintf(out, "%s %s(", retType, metName);
+	writeDecl(out, THIS, deezPtr, false);
 
 	yyjson_val* params = yyjson_obj_get(met, "params");
 	if (yyjson_get_len(params))
