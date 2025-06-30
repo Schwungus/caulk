@@ -85,6 +85,17 @@ noop:
 	return buf;
 }
 
+static const char* structName(yyjson_val* type) {
+	const char* master = yyjson_get_str(yyjson_obj_get(type, "struct"));
+	if (master == NULL)
+		master = yyjson_get_str(yyjson_obj_get(type, "classname"));
+	return master;
+}
+
+static int isConstructor(yyjson_val* met) {
+	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
+}
+
 static void declareEnum(yyjson_val* enm, const char* master) {
 	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
 	fprintf(hOutput, "#ifndef __cplusplus\n");
@@ -138,9 +149,15 @@ static void writeDecl(FILE* out, const char* name, const char* type, bool privat
 	}
 }
 
-static void writeFields(FILE* out, yyjson_val* fields) {
+static void genFields(yyjson_val* struc) {
+	yyjson_val* fields = yyjson_obj_get(struc, "fields");
+	if (!yyjson_get_len(fields))
+		return;
+
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(fields, &iter);
+
+	fprintf(hOutput, "struct %s {\n", structName(struc));
 
 	yyjson_val* field = NULL;
 	while ((field = yyjson_arr_iter_next(&iter)) != NULL) {
@@ -148,10 +165,12 @@ static void writeFields(FILE* out, yyjson_val* fields) {
 		const char* type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
 		bool private = yyjson_get_bool(yyjson_obj_get(field, "private"));
 
-		fprintf(out, INDENT);
-		writeDecl(out, name, sanitizeType(type), private);
-		fprintf(out, ";\n");
+		fprintf(hOutput, INDENT);
+		writeDecl(hOutput, name, sanitizeType(type), private);
+		fprintf(hOutput, ";\n");
 	}
+
+	fprintf(hOutput, "};\n");
 }
 
 static void writeParams(FILE* out, yyjson_val* params) {
@@ -172,17 +191,6 @@ static void writeParams(FILE* out, yyjson_val* params) {
 		if (yyjson_arr_iter_has_next(&iter))
 			fprintf(out, ", ");
 	}
-}
-
-static const char* structName(yyjson_val* type) {
-	const char* master = yyjson_get_str(yyjson_obj_get(type, "struct"));
-	if (master == NULL)
-		master = yyjson_get_str(yyjson_obj_get(type, "classname"));
-	return master;
-}
-
-static int isConstructor(yyjson_val* met) {
-	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
 }
 
 static const char* ignoreForMethods[] = {
@@ -449,17 +457,7 @@ static void genTypedefs() {
 }
 
 static void genStruct(yyjson_val* struc) {
-	const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
-	if (name == NULL)
-		name = yyjson_get_str(yyjson_obj_get(struc, "classname"));
-
-	yyjson_val* fields = yyjson_obj_get(struc, "fields");
-	if (yyjson_get_len(fields)) {
-		fprintf(hOutput, "struct %s {\n", name);
-		writeFields(hOutput, fields);
-		fprintf(hOutput, "};\n");
-	}
-
+	genFields(struc);
 	genMethods(struc);
 }
 
