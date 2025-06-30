@@ -185,6 +185,12 @@ static int isConstructor(yyjson_val* met) {
 	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
 }
 
+static const char* ignoreForMethods[] = {
+    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
+    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
+    "SteamGameServer_v",	 "SteamGameServerStats_v",
+};
+
 static const char* normalizeMethodName(yyjson_val* method) {
 	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
 
@@ -195,7 +201,7 @@ static const char* normalizeMethodName(yyjson_val* method) {
 	return buf;
 }
 
-static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* method) {
+static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* method) {
 	const char* metName = normalizeMethodName(method);
 	static char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
@@ -226,15 +232,15 @@ static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* method) 
 	fprintf(out, ")");
 }
 
-static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
+static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
 	const char* mastName = structName(tMaster);
 	const char* metName = yyjson_get_str(yyjson_obj_get(met, "methodname"));
 	const char* metType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
 
-	writeMethodSign(hOutput, tMaster, met);
+	writeMethodSignature(hOutput, tMaster, met);
 	fprintf(hOutput, ";\n");
 
-	writeMethodSign(cOutput, tMaster, met);
+	writeMethodSignature(cOutput, tMaster, met);
 	fprintf(cOutput, " {\n");
 
 	yyjson_val* params = yyjson_obj_get(met, "params");
@@ -300,25 +306,83 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 	fprintf(cOutput, "}\n\n");
 }
 
-static const char* ignoreForMethods[] = {
-    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
-    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
-    "SteamGameServer_v",	 "SteamGameServerStats_v",
+static const char* normalizeAccessorName(yyjson_val* accessor) {
+	const char* accName = yyjson_get_str(yyjson_obj_get(accessor, "name_flat"));
+
+	static char buf[1024];
+	strcpy(buf, METHOD_PREFIX);
+	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
+
+	char* suffix = strstr(buf, "_v0");
+	if (suffix != NULL)
+		*suffix = '\0';
+
+	return buf;
+}
+
+static void writeAccessorSignature(FILE* out, yyjson_val* tMaster, yyjson_val* accessor) {
+	const char* accName = normalizeAccessorName(accessor);
+	static char deezType[1024] = {0}, deezPtr[1024] = {0};
+
+	strcpy(deezType, structName(tMaster));
+	if (out == cOutput)
+		strcpy(deezType, prefixUserType(deezType));
+
+	strcpy(deezPtr, deezType);
+	size_t i = strlen(deezPtr);
+	deezPtr[i++] = '*';
+	deezPtr[i++] = '\0';
+
+	fprintf(out, "%s* %s()", deezType, accName);
+}
+
+static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
+	const char* mastName = structName(tMaster);
+	const char* accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
+
+	writeAccessorSignature(hOutput, tMaster, acc);
+	fprintf(hOutput, ";\n");
+
+	writeAccessorSignature(cOutput, tMaster, acc);
+	fprintf(cOutput, " {\n");
+	fprintf(cOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
+	fprintf(cOutput, INDENT "return *reinterpret_cast<%s**>(&" RESULT ");\n", prefixUserType(mastName));
+	fprintf(cOutput, "}\n\n");
+}
+
+struct wrapper {
+	const char* arrayName;
+	void (*wrap)(yyjson_val*, yyjson_val*);
+	const char* flatnameField;
 };
 
 static void genMethods(yyjson_val* master) {
-	yyjson_arr_iter iter;
-	yyjson_arr_iter_init(yyjson_obj_get(master, "methods"), &iter);
+	static const struct wrapper wrappers[] = {
+	    {"methods", wrapMethod, "methodname_flat"},
+	    {"accessors", wrapAccessor, "name_flat"},
+	};
 
-	yyjson_val* met = NULL;
-	while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
-		const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-		for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
-			if (strstr(name, ignoreForMethods[i]) != NULL)
-				goto next;
-		genWrapper(master, met);
-	next:
-		continue;
+	for (size_t i = 0; i < LENGTH(wrappers); i++) {
+		const struct wrapper* wrapper = &wrappers[i];
+
+		yyjson_val* methods = yyjson_obj_get(master, wrapper->arrayName);
+		if (!yyjson_get_len(methods))
+			continue;
+		fprintf(hOutput, "\n");
+
+		yyjson_arr_iter iter;
+		yyjson_arr_iter_init(yyjson_obj_get(master, wrapper->arrayName), &iter);
+
+		yyjson_val* met = NULL;
+		while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
+			const char* name = yyjson_get_str(yyjson_obj_get(met, wrapper->flatnameField));
+			for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
+				if (strstr(name, ignoreForMethods[i]) != NULL)
+					goto next;
+			wrapper->wrap(master, met);
+		next:
+			continue;
+		}
 	}
 }
 
@@ -384,65 +448,6 @@ static void genTypedefs() {
 	}
 }
 
-static const char* normalizeAccessorName(yyjson_val* accessor) {
-	const char* accName = yyjson_get_str(yyjson_obj_get(accessor, "name_flat"));
-
-	static char buf[1024];
-	strcpy(buf, METHOD_PREFIX);
-	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
-
-	char* suffix = strstr(buf, "_v0");
-	if (suffix != NULL)
-		*suffix = '\0';
-
-	return buf;
-}
-
-static void writeMethodSignAccessor(FILE* out, yyjson_val* tMaster, yyjson_val* accessor) {
-	const char* accName = normalizeAccessorName(accessor);
-	static char deezType[1024] = {0}, deezPtr[1024] = {0};
-
-	strcpy(deezType, structName(tMaster));
-	if (out == cOutput)
-		strcpy(deezType, prefixUserType(deezType));
-
-	strcpy(deezPtr, deezType);
-	size_t i = strlen(deezPtr);
-	deezPtr[i++] = '*';
-	deezPtr[i++] = '\0';
-
-	fprintf(out, "%s* %s()", deezType, accName);
-}
-
-static void genWrapperAccessor(yyjson_val* tMaster, yyjson_val* acc) {
-	const char* mastName = structName(tMaster);
-	const char* accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
-
-	writeMethodSignAccessor(hOutput, tMaster, acc);
-	fprintf(hOutput, ";\n");
-	writeMethodSignAccessor(cOutput, tMaster, acc);
-	fprintf(cOutput, " {\n");
-	fprintf(cOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
-	fprintf(cOutput, INDENT "return *reinterpret_cast<%s**>(&" RESULT ");\n", prefixUserType(mastName));
-	fprintf(cOutput, "}\n\n");
-}
-
-static void genAccessors(yyjson_val* master) {
-	yyjson_arr_iter iter;
-	yyjson_arr_iter_init(yyjson_obj_get(master, "accessors"), &iter);
-
-	yyjson_val* acc = NULL;
-	while ((acc = yyjson_arr_iter_next(&iter)) != NULL) {
-		const char* name = yyjson_get_str(yyjson_obj_get(acc, "name_flat"));
-		for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
-			if (strstr(name, ignoreForMethods[i]) != NULL)
-				goto next;
-		genWrapperAccessor(master, acc);
-	next:
-		continue;
-	}
-}
-
 static void genStruct(yyjson_val* struc) {
 	const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 	if (name == NULL)
@@ -455,17 +460,7 @@ static void genStruct(yyjson_val* struc) {
 		fprintf(hOutput, "};\n");
 	}
 
-	yyjson_val* methods = yyjson_obj_get(struc, "methods");
-	if (yyjson_get_len(methods)) {
-		fprintf(hOutput, "\n");
-		genMethods(struc);
-	}
-
-	yyjson_val* accessors = yyjson_obj_get(struc, "accessors");
-	if (yyjson_get_len(accessors)) {
-		fprintf(hOutput, "\n");
-		genAccessors(struc);
-	}
+	genMethods(struc);
 }
 
 static void genStructs() {
