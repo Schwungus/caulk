@@ -6,7 +6,8 @@
 
 #define INDENT "\t"
 #define THIS "__THIS"
-#define PREFIX "caulk::"
+#define NS_PREFIX "caulk::"
+#define METHOD_PREFIX "caulk_"
 #define RESULT "__RESULT"
 
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
@@ -76,8 +77,8 @@ static const char* prefixUserType(const char* type) {
 		dest = buf + strlen("const ");
 		type += strlen("const ");
 	}
-	strcpy(dest, PREFIX);
-	dest += strlen(PREFIX);
+	strcpy(dest, NS_PREFIX);
+	dest += strlen(NS_PREFIX);
 	strcpy(dest, type);
 
 	return buf;
@@ -186,15 +187,24 @@ static int isConstructor(yyjson_val* met) {
 	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
 }
 
-static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
-	const char* metName = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
+static const char* normalizeMethodName(yyjson_val* method) {
+	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
+
+	static char buf[1024];
+	strcpy(buf, METHOD_PREFIX);
+	strcpy(buf + strlen(METHOD_PREFIX), metName + strlen("SteamAPI_"));
+	return buf;
+}
+
+static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* method) {
+	const char* metName = normalizeMethodName(method);
 	char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
 	strcpy(deezType, structName(tMaster));
-	if (isConstructor(met))
+	if (isConstructor(method))
 		strcpy(retType, deezType);
 	else
-		strcpy(retType, yyjson_get_str(yyjson_obj_get(met, "returntype")));
+		strcpy(retType, yyjson_get_str(yyjson_obj_get(method, "returntype")));
 
 	if (out == cOutput) {
 		strcpy(deezType, prefixUserType(deezType));
@@ -209,7 +219,7 @@ static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* met) {
 	fprintf(out, "%s %s(", retType, metName);
 	writeDecl(out, THIS, deezPtr, false);
 
-	yyjson_val* params = yyjson_obj_get(met, "params");
+	yyjson_val* params = yyjson_obj_get(method, "params");
 	if (yyjson_get_len(params))
 		fprintf(out, ", ");
 	writeParams(out, params);
