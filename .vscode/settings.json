@@ -6,7 +6,14 @@
     "clangd.enableCodeCompletion": true,
     "cmake.generator": "Ninja",
     "cmake.exportCompileCommandsFile": true,
-    "cSpell.words": ["enumname", "steamworks", "steamworksgen", "strequal"],
+    "cSpell.words": [
+        "DYLIB",
+        "enumname",
+        "libsteam",
+        "steamworks",
+        "steamworksgen",
+        "strequal"
+    ],
     "files.exclude": {
         ".cache": true
     },
