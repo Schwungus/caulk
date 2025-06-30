@@ -191,6 +191,7 @@ static const char* normalizeMethodName(yyjson_val* method) {
 	static char buf[1024];
 	strcpy(buf, METHOD_PREFIX);
 	strcpy(buf + strlen(METHOD_PREFIX), metName + strlen("SteamAPI_"));
+
 	return buf;
 }
 
@@ -389,6 +390,11 @@ static const char* normalizeAccessorName(yyjson_val* accessor) {
 	static char buf[1024];
 	strcpy(buf, METHOD_PREFIX);
 	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
+
+	char* suffix = strstr(buf, "_v0");
+	if (suffix != NULL)
+		*suffix = '\0';
+
 	return buf;
 }
 

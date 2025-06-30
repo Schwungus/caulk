@@ -22,8 +22,8 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	ISteamUser* steamUser = caulk_SteamUser_v023();
-	ISteamFriends* steamFriends = caulk_SteamFriends_v018();
+	ISteamUser* steamUser = caulk_SteamUser();
+	ISteamFriends* steamFriends = caulk_SteamFriends();
 	printf(
 	    "Logged in as %s (%llu)\n\n", caulk_ISteamFriends_GetPersonaName(steamFriends),
 	    caulk_ISteamUser_GetSteamID(steamUser)
