@@ -414,17 +414,13 @@ static void genTypedefs() {
 	genEnums(yyjson_obj_get(ROOT_OBJ, "enums"), NULL);
 
 #define SPECIAL (2)
+	static const char* sources[] = {"structs", "callback_structs", [SPECIAL] = "interfaces"};
 	yyjson_arr_iter iter;
-	yyjson_val* sources[] = {
-	    yyjson_obj_get(ROOT_OBJ, "structs"),
-	    yyjson_obj_get(ROOT_OBJ, "callback_structs"),
-	    [SPECIAL] = yyjson_obj_get(ROOT_OBJ, "interfaces"),
-	};
 
 	for (size_t i = 0; i < LENGTH(sources); i++) {
-		yyjson_val* struc = NULL;
-		yyjson_arr_iter_init(sources[i], &iter);
+		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
+		yyjson_val* struc = NULL;
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
 			const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 			if (i == SPECIAL) {
@@ -443,10 +439,10 @@ static void genTypedefs() {
 	}
 #undef SPECIAL
 
-	yyjson_val* typeDef = NULL;
 	yyjson_val* typeDefs = yyjson_obj_get(ROOT_OBJ, "typedefs");
 	yyjson_arr_iter_init(typeDefs, &iter);
 
+	yyjson_val* typeDef = NULL;
 	while ((typeDef = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(typeDef, "typedef"));
 		const char* type = yyjson_get_str(yyjson_obj_get(typeDef, "type"));
@@ -456,25 +452,17 @@ static void genTypedefs() {
 	}
 }
 
-static void genStruct(yyjson_val* struc) {
-	genFields(struc);
-	genMethods(struc);
-}
-
 static void genStructs() {
-	yyjson_arr_iter iter;
-	yyjson_val* sources[] = {
-	    yyjson_obj_get(ROOT_OBJ, "structs"),
-	    yyjson_obj_get(ROOT_OBJ, "callback_structs"),
-	    yyjson_obj_get(ROOT_OBJ, "interfaces"),
-	};
-
+	static const char* sources[] = {"structs", "callback_structs", "interfaces"};
 	for (size_t i = 0; i < LENGTH(sources); i++) {
-		yyjson_val* struc = NULL;
-		yyjson_arr_iter_init(sources[i], &iter);
+		yyjson_arr_iter iter;
+		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
-		while ((struc = yyjson_arr_iter_next(&iter)) != NULL)
-			genStruct(struc);
+		yyjson_val* struc = NULL;
+		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
+			genFields(struc);
+			genMethods(struc);
+		}
 	}
 }
 
