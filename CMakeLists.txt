@@ -19,6 +19,9 @@ FetchContent_MakeAvailable(yyjson)
 if(NOT DEFINED STEAMWORKS_SDK_ZIP)
     set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip)
 endif()
+if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
+    message(FATAL_ERROR "You forgot to specify a path to Steamworks SDK .zip! Review the project's README")
+endif()
 
 set(raw_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/steamworks)
 file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${raw_SOURCE_DIR})
@@ -31,11 +34,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(LIB_NAME ${PROJECT_NAME})
 set(RAW_ROOT ${raw_SOURCE_DIR}/sdk)
 set(RAW_INCLUDE_DIR ${RAW_ROOT}/public)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(GEN_NAME ${PROJECT_NAME}GenBindings)
+set(GEN_NAME ${LIB_NAME}GenBindings)
 add_executable(${GEN_NAME} ${SRC_DIR}/gen.c)
 target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
@@ -49,7 +53,6 @@ add_custom_command(
     BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT}
     VERBATIM)
 
-set(LIB_NAME ${PROJECT_NAME})
 add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
 add_dependencies(${LIB_NAME} ${GEN_NAME})
 set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
@@ -59,7 +62,7 @@ target_include_directories(
     PUBLIC ${SRC_DIR} ${RAW_INCLUDE_DIR} ${GEN_OUT_DIR}
     PRIVATE ${RAW_INCLUDE_DIR}/steam)
 
-set(TEST_NAME ${PROJECT_NAME}Test)
+set(TEST_NAME ${LIB_NAME}Test)
 add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
 set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(${TEST_NAME} ${LIB_NAME})
@@ -76,23 +79,38 @@ if(WIN32)
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "steam_api")
     endif()
-    set(COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}.dll)
+    set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}.dll)
     target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
 elseif(LINUX)
     set(STEAM_LIB "linux64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "linux32")
     endif()
-    set(COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
-    target_link_libraries(${LIB_NAME} PUBLIC ${COPY_DLL})
+    set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
+    target_link_libraries(${LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
 else()
     target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
 endif()
 
-if(DEFINED COPY_DLL)
+function(caulk_register TGT)
+    target_link_libraries(${TGT} ${LIB_NAME})
+
+    if(DEFINED CAULK_COPY_DLL)
+        add_custom_command(
+            TARGET ${TGT}
+            POST_BUILD
+            COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
+    endif()
+
+    set(STEAM_APPID ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt)
+    if(NOT EXISTS ${STEAM_APPID})
+        message(FATAL_ERROR "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
+    endif()
+
     add_custom_command(
-        TARGET ${TEST_NAME}
+        TARGET ${TGT}
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy ${COPY_DLL} $<TARGET_FILE_DIR:${TEST_NAME}>
-        COMMAND_EXPAND_LISTS)
-endif()
+        COMMAND ${CMAKE_COMMAND} ARGS -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
+endfunction()
+
+caulk_register(${TEST_NAME})
