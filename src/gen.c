@@ -58,7 +58,7 @@ static const char* sanitizeType(const char* weee) {
 static const char* prefixUserType(const char* type) {
 	static char buf[1024] = {0};
 	static const char* ignore[] = {
-	    "unsigned ", "int ", "intptr", "int32", "int64",  "int ",
+	    "unsigned ", "int ", "intptr", "int16", "int32",  "int64",
 	    "char",	 "void", "bool",   "float", "double", "size_t",
 	};
 
