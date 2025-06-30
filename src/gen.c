@@ -485,13 +485,13 @@ int main(int argc, char* argv[]) {
 
 	fprintf(hOutput, "#pragma once\n\n");
 	fprintf(hOutput, "#include <stddef.h>\n");
-	fprintf(hOutput, "#include <stdint.h>\n\n");
+	fprintf(hOutput, "#include <stdint.h>\n");
+	fprintf(hOutput, "#include <stdbool.h>\n\n");
 
 	fprintf(hOutput, "typedef uint32_t enum32_t;\n");
 	fprintf(hOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
 	fprintf(hOutput, "typedef uint64_t CSteamID, CGameID;\n");
 	fprintf(hOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n\n");
-	fprintf(hOutput, "#ifndef __cplusplus\ntypedef uint8_t bool;\n#endif\n\n");
 
 	fprintf(cOutput, "#include \"steam_api.h\"\n\n");
 
