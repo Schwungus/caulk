@@ -299,20 +299,21 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 	fprintf(cOutput, "}\n\n");
 }
 
-static void genMethods(yyjson_val* master) {
-	static const char* ignore[] = {
-	    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
-	    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
-	};
+static const char* ignoreForMethods[] = {
+    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
+    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
+    "SteamGameServer_v",	 "SteamGameServerStats_v",
+};
 
+static void genMethods(yyjson_val* master) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(yyjson_obj_get(master, "methods"), &iter);
 
 	yyjson_val* met = NULL;
 	while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* name = yyjson_get_str(yyjson_obj_get(met, "methodname_flat"));
-		for (size_t i = 0; i < LENGTH(ignore); i++)
-			if (strstr(name, ignore[i]) != NULL)
+		for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
+			if (strstr(name, ignoreForMethods[i]) != NULL)
 				goto next;
 		genWrapper(master, met);
 	next:
@@ -382,6 +383,60 @@ static void genTypedefs() {
 	}
 }
 
+static const char* normalizeAccessorName(yyjson_val* accessor) {
+	const char* accName = yyjson_get_str(yyjson_obj_get(accessor, "name_flat"));
+
+	static char buf[1024];
+	strcpy(buf, METHOD_PREFIX);
+	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
+	return buf;
+}
+
+static void writeMethodSignAccessor(FILE* out, yyjson_val* tMaster, yyjson_val* accessor) {
+	const char* accName = normalizeAccessorName(accessor);
+	static char deezType[1024] = {0}, deezPtr[1024] = {0};
+
+	strcpy(deezType, structName(tMaster));
+	if (out == cOutput)
+		strcpy(deezType, prefixUserType(deezType));
+
+	strcpy(deezPtr, deezType);
+	size_t i = strlen(deezPtr);
+	deezPtr[i++] = '*';
+	deezPtr[i++] = '\0';
+
+	fprintf(out, "%s %s()", deezType, accName);
+}
+
+static void genWrapperAccessor(yyjson_val* tMaster, yyjson_val* acc) {
+	const char* mastName = structName(tMaster);
+	const char* accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
+
+	writeMethodSignAccessor(hOutput, tMaster, acc);
+	fprintf(hOutput, ";\n");
+	writeMethodSignAccessor(cOutput, tMaster, acc);
+	fprintf(cOutput, " {\n");
+	fprintf(cOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
+	fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(mastName));
+	fprintf(cOutput, "}\n\n");
+}
+
+static void genAccessors(yyjson_val* master) {
+	yyjson_arr_iter iter;
+	yyjson_arr_iter_init(yyjson_obj_get(master, "accessors"), &iter);
+
+	yyjson_val* acc = NULL;
+	while ((acc = yyjson_arr_iter_next(&iter)) != NULL) {
+		const char* name = yyjson_get_str(yyjson_obj_get(acc, "name_flat"));
+		for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
+			if (strstr(name, ignoreForMethods[i]) != NULL)
+				goto next;
+		genWrapperAccessor(master, acc);
+	next:
+		continue;
+	}
+}
+
 static void genStruct(yyjson_val* struc) {
 	const char* name = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 	if (name == NULL)
@@ -398,6 +453,12 @@ static void genStruct(yyjson_val* struc) {
 	if (yyjson_get_len(methods)) {
 		fprintf(hOutput, "\n");
 		genMethods(struc);
+	}
+
+	yyjson_val* accessors = yyjson_obj_get(struc, "accessors");
+	if (yyjson_get_len(accessors)) {
+		fprintf(hOutput, "\n");
+		genAccessors(struc);
 	}
 }
 
