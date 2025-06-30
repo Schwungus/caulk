@@ -76,13 +76,23 @@ if(WIN32)
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "steam_api")
     endif()
+    set(COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}.dll)
     target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
 elseif(LINUX)
     set(STEAM_LIB "linux64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "linux32")
     endif()
-    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
+    set(COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
+    target_link_libraries(${LIB_NAME} PUBLIC ${COPY_DLL})
 else()
     target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
+endif()
+
+if(DEFINED COPY_DLL)
+    add_custom_command(
+        TARGET ${TEST_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} ARGS -E copy ${COPY_DLL} $<TARGET_FILE_DIR:${TEST_NAME}>
+        COMMAND_EXPAND_LISTS)
 endif()
