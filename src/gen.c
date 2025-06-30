@@ -405,7 +405,7 @@ static void writeMethodSignAccessor(FILE* out, yyjson_val* tMaster, yyjson_val* 
 	deezPtr[i++] = '*';
 	deezPtr[i++] = '\0';
 
-	fprintf(out, "%s %s()", deezType, accName);
+	fprintf(out, "%s* %s()", deezType, accName);
 }
 
 static void genWrapperAccessor(yyjson_val* tMaster, yyjson_val* acc) {
@@ -417,7 +417,7 @@ static void genWrapperAccessor(yyjson_val* tMaster, yyjson_val* acc) {
 	writeMethodSignAccessor(cOutput, tMaster, acc);
 	fprintf(cOutput, " {\n");
 	fprintf(cOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
-	fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(mastName));
+	fprintf(cOutput, INDENT "return *reinterpret_cast<%s**>(&" RESULT ");\n", prefixUserType(mastName));
 	fprintf(cOutput, "}\n\n");
 }
 
