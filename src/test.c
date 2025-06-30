@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "caulk.h"
 
 #ifdef _WIN32
@@ -9,8 +11,9 @@
 #endif
 
 int main(int argc, char* argv[]) {
-	caulk_Init();
+	if (!caulk_Init())
+		return EXIT_FAILURE;
 	sleepSecs(5);
 	caulk_Shutdown();
-	return 0;
+	return EXIT_SUCCESS;
 }

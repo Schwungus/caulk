@@ -64,6 +64,12 @@ add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
 set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_link_libraries(${TEST_NAME} ${LIB_NAME})
 
+add_custom_command(
+    TARGET ${TEST_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt $<TARGET_FILE_DIR:${TEST_NAME}>
+    COMMAND_EXPAND_LISTS)
+
 set(DYLIB_ROOT ${RAW_ROOT}/redistributable_bin)
 if(WIN32)
     set(STEAM_LIB "win64/steam_api64")
