@@ -12,15 +12,10 @@
 
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
-static void fprint0(FILE* file, const char* str, size_t len) {
+static void fprintN(FILE* file, const char* str, size_t len) {
 	for (size_t i = 0; i < len; i++)
 		fputc(str[i], file);
 }
-
-struct arg {
-	const char* name;
-	size_t len;
-};
 
 static FILE *hOutput = NULL, *cOutput = NULL;
 static yyjson_doc* gDoc;
@@ -130,10 +125,10 @@ static void genEnums(yyjson_val* enums, const char* master) {
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
 	char* offset = NULL;
 	if ((offset = strstr(type, "(*)")) != NULL) {
-		fprint0(out, type, offset + 2 - type);
+		fprintN(out, type, offset + 2 - type);
 		fprintf(out, "%s%s%s", private ? "__" : "", name, offset + 2);
 	} else if ((offset = strstr(type, "[")) != NULL) {
-		fprint0(out, type, offset - 1 - type);
+		fprintN(out, type, offset - 1 - type);
 		fprintf(out, " %s%s%s", private ? "__" : "", name, offset);
 	} else {
 		fprintf(out, "%s", type);
@@ -477,7 +472,7 @@ int main(int argc, char* argv[]) {
 	genStructs();
 	genInterfaces();
 
-	fprintf(cOutput, "\n}\n\n");
+	fprintf(cOutput, "}\n");
 
 	yyjson_doc_free(gDoc);
 	fclose(hOutput);
