@@ -6,8 +6,8 @@ extern "C" {
 
 #include "__gen.h"
 
-bool SteamAPI_Init();
-void SteamAPI_Shutdown();
+bool caulk_Init();
+void caulk_Shutdown();
 
 #ifdef __cplusplus
 }

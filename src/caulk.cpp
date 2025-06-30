@@ -5,11 +5,11 @@ namespace caulk {
 }
 
 extern "C" {
-bool caulk::SteamAPI_Init() {
+bool caulk::caulk_Init() {
 	return ::SteamAPI_Init();
 }
 
-void caulk::SteamAPI_Shutdown() {
+void caulk::caulk_Shutdown() {
 	::SteamAPI_Shutdown();
 }
 }

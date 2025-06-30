@@ -9,8 +9,8 @@
 #endif
 
 int main(int argc, char* argv[]) {
-	SteamAPI_Init();
+	caulk_Init();
 	sleepSecs(5);
-	SteamAPI_Shutdown();
+	caulk_Shutdown();
 	return 0;
 }
