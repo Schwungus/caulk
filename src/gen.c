@@ -165,7 +165,7 @@ static void writeParams(FILE* out, yyjson_val* params) {
 		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
-		char type[1024];
+		static char type[1024];
 		strcpy(type, sanitizeType(type0));
 		if (out == cOutput)
 			strcpy(type, prefixUserType(type));
@@ -198,7 +198,7 @@ static const char* normalizeMethodName(yyjson_val* method) {
 
 static void writeMethodSign(FILE* out, yyjson_val* tMaster, yyjson_val* method) {
 	const char* metName = normalizeMethodName(method);
-	char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
+	static char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
 	strcpy(deezType, structName(tMaster));
 	if (isConstructor(method))
@@ -250,7 +250,7 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
-		char pType[1024] = {0};
+		static char pType[1024] = {0};
 		strcpy(pType, prefixUserType(sanitizeType(pType0)));
 
 		fprintf(cOutput, INDENT "%s* __%s = &%s;\n", pType, pName, pName);
@@ -277,7 +277,7 @@ static void genWrapper(yyjson_val* tMaster, yyjson_val* met) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
-		char pType[1024] = {0};
+		static char pType[1024] = {0};
 		strcpy(pType, sanitizeType(pType0));
 
 		fprintf(cOutput, INDENT INDENT);
