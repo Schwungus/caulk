@@ -17,7 +17,7 @@ caulk requires a [ZIP of the Steamworks SDK](https://partner.steamgames.com/down
 caulk uses CMake for the build pipeline. Since CMake is the de-facto standard for cross-platform C/C++ compilation, you shouldn't be afraid to use it - here's a `CMakeLists.txt` example:
 
 ```cmake
-cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
 project(myProject)
 
 # REQUIRED: point this to your Steamworks SDK archive.
