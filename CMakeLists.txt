@@ -56,9 +56,8 @@ set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 add_custom_command(
     TARGET ${GEN_NAME}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${GEN_NAME}> ARGS ${GEN_H_OUT} ${GEN_C_OUT} ${RAW_INCLUDE_DIR}/steam/steam_api.json
-    BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT}
-    VERBATIM)
+    COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${RAW_INCLUDE_DIR}/steam/steam_api.json
+    BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT})
 
 add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
 add_dependencies(${LIB_NAME} ${GEN_NAME})
@@ -95,13 +94,13 @@ function(caulk_register TGT)
         add_custom_command(
             TARGET ${TGT}
             POST_BUILD
-            COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
+            COMMAND ${CMAKE_COMMAND} -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
     endif()
 
     add_custom_command(
         TARGET ${TGT}
         POST_BUILD
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
+        COMMAND ${CMAKE_COMMAND} -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
 endfunction()
 
 set(TEST_NAME ${LIB_NAME}Test)
