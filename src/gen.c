@@ -25,7 +25,7 @@ static const char* fieldName(const char* field, const char* master) {
 	if (master == NULL)
 		return field;
 
-	static char buf[512];
+	static char buf[1024] = {0};
 	size_t i = 0;
 
 	for (; i < strlen(master); i++)
@@ -42,7 +42,7 @@ static const char* fieldName(const char* field, const char* master) {
 }
 
 static const char* sanitizeType(const char* weee) {
-	static char buf[512];
+	static char buf[1024] = {0};
 	size_t i = 0;
 	for (; i < strlen(weee); i++)
 		if (weee[i] == ':')
@@ -182,7 +182,7 @@ static void writeParams(FILE* out, yyjson_val* params) {
 		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
-		static char type[1024];
+		static char type[1024] = {0};
 		strcpy(type, sanitizeType(type0));
 		if (out == cOutput)
 			strcpy(type, prefixUserType(type));
@@ -202,7 +202,7 @@ static const char* ignoreForMethods[] = {
 static const char* normalizeMethodName(yyjson_val* method) {
 	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
 
-	static char buf[1024];
+	static char buf[1024] = {0};
 	strcpy(buf, METHOD_PREFIX);
 	strcpy(buf + strlen(METHOD_PREFIX), metName + strlen("SteamAPI_"));
 
@@ -273,10 +273,9 @@ static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
 	size_t count = yyjson_get_len(params), idx = 0;
 	int retVoid = !strcmp(metType, "void");
 
-	if (retVoid)
-		fprintf(cOutput, INDENT);
-	else
-		fprintf(cOutput, INDENT "%s " RESULT " = ", metType);
+	fprintf(cOutput, INDENT);
+	if (!retVoid)
+		fprintf(cOutput, "%s " RESULT " = ", metType);
 
 	if (isConstructor(met))
 		fprintf(cOutput, "%s(", metType);
@@ -298,15 +297,13 @@ static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
 				fprintf(cOutput, "*");
 		fprintf(cOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
 
-		if (idx++ < count - 1)
-			fprintf(cOutput, ", \n");
-		else
-			fprintf(cOutput, "\n");
+		if (++idx < count)
+			fprintf(cOutput, ", ");
+		fprintf(cOutput, "\n");
 	}
 	if (count)
-		fprintf(cOutput, INDENT ");\n");
-	else
-		fprintf(cOutput, ");\n");
+		fprintf(cOutput, INDENT);
+	fprintf(cOutput, ");\n");
 
 	if (!retVoid)
 		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(metType));
@@ -317,7 +314,7 @@ static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
 static const char* normalizeAccessorName(yyjson_val* accessor) {
 	const char* accName = yyjson_get_str(yyjson_obj_get(accessor, "name_flat"));
 
-	static char buf[1024];
+	static char buf[1024] = {0};
 	strcpy(buf, METHOD_PREFIX);
 	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
 
