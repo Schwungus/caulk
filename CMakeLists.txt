@@ -23,7 +23,14 @@ if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
     message(FATAL_ERROR "You forgot to specify a path to Steamworks SDK .zip! Review the project's README")
 endif()
 
-set(raw_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/steamworks)
+if(NOT DEFINED STEAM_APPID)
+    set(STEAM_APPID ${CMAKE_SOURCE_DIR}/steam_appid.txt)
+endif()
+if(NOT EXISTS ${STEAM_APPID})
+    message(FATAL_ERROR "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
+endif()
+
+set(raw_SOURCE_DIR ${CMAKE_BINARY_DIR}/steamworks)
 file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${raw_SOURCE_DIR})
 
 set(CMAKE_C_STANDARD 11)
@@ -43,7 +50,7 @@ set(GEN_NAME ${LIB_NAME}GenBindings)
 add_executable(${GEN_NAME} ${SRC_DIR}/gen.c)
 target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
-set(GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/steamworksgen)
+set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
 set(GEN_H_OUT ${GEN_OUT_DIR}/__gen.h)
 set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 add_custom_command(
@@ -89,13 +96,6 @@ function(caulk_register TGT)
             TARGET ${TGT}
             POST_BUILD
             COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
-    endif()
-
-    if(NOT DEFINED STEAM_APPID)
-        set(STEAM_APPID ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt)
-    endif()
-    if(NOT EXISTS ${STEAM_APPID})
-        message(FATAL_ERROR "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
     endif()
 
     add_custom_command(
