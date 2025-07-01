@@ -51,6 +51,8 @@ add_executable(${GEN_NAME} ${SRC_DIR}/gen.c)
 target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
+file(MAKE_DIRECTORY ${GEN_OUT_DIR})
+
 set(GEN_H_OUT ${GEN_OUT_DIR}/__gen.h)
 set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 add_custom_command(
