@@ -62,19 +62,6 @@ target_include_directories(
     PUBLIC ${SRC_DIR} ${RAW_INCLUDE_DIR} ${GEN_OUT_DIR}
     PRIVATE ${RAW_INCLUDE_DIR}/steam)
 
-if (NOT DEFINED CAULK_OMIT_TEST)
-    set(TEST_NAME ${LIB_NAME}Test)
-    add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
-    set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
-    target_link_libraries(${TEST_NAME} ${LIB_NAME})
-
-    add_custom_command(
-        TARGET ${TEST_NAME}
-        POST_BUILD
-        COMMAND ${CMAKE_COMMAND} ARGS -E copy ${CMAKE_CURRENT_SOURCE_DIR}/steam_appid.txt $<TARGET_FILE_DIR:${TEST_NAME}>
-        COMMAND_EXPAND_LISTS)
-endif()
-
 set(DYLIB_ROOT ${RAW_ROOT}/redistributable_bin)
 if(WIN32)
     set(STEAM_LIB "win64/steam_api64")
@@ -117,4 +104,10 @@ function(caulk_register TGT)
         COMMAND ${CMAKE_COMMAND} ARGS -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
 endfunction()
 
-caulk_register(${TEST_NAME})
+set(TEST_NAME ${LIB_NAME}Test)
+option(CAULK_BUILD_TEST "Build the ${TEST_NAME} executable?" ON)
+if(CAULK_BUILD_TEST)
+    add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
+    set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
+    caulk_register(${TEST_NAME})
+endif()
