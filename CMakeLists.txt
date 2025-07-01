@@ -13,9 +13,6 @@ FetchContent_Declare(
     GIT_TAG "0.11.1")
 FetchContent_MakeAvailable(yyjson)
 
-# FetchContent_Declare(raw URL "https://partner.steamgames.com/downloads/steamworks_sdk_162.zip")
-# FetchContent_MakeAvailable(raw)
-
 if(NOT DEFINED STEAMWORKS_SDK_ZIP)
     set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip)
 endif()
@@ -30,8 +27,8 @@ if(NOT EXISTS ${STEAM_APPID})
     message(FATAL_ERROR "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
 endif()
 
-set(raw_SOURCE_DIR ${CMAKE_BINARY_DIR}/steamworks)
-file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${raw_SOURCE_DIR})
+set(SDK_SOURCE_DIR ${CMAKE_BINARY_DIR}/steamworks)
+file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${SDK_SOURCE_DIR})
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -42,12 +39,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(LIB_NAME ${PROJECT_NAME})
-set(RAW_ROOT ${raw_SOURCE_DIR}/sdk)
-set(RAW_INCLUDE_DIR ${RAW_ROOT}/public)
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
+set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
+set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(GEN_NAME ${LIB_NAME}GenBindings)
-add_executable(${GEN_NAME} ${SRC_DIR}/gen.c)
+add_executable(${GEN_NAME} ${CAULK_SRC_DIR}/gen.c)
 target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
@@ -58,19 +55,19 @@ set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 add_custom_command(
     TARGET ${GEN_NAME}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${RAW_INCLUDE_DIR}/steam/steam_api.json
+    COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${SDK_INCLUDE_DIR}/steam/steam_api.json
     BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT})
 
-add_library(${LIB_NAME} ${SRC_DIR}/caulk.h ${SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
+add_library(${LIB_NAME} ${CAULK_SRC_DIR}/caulk.h ${CAULK_SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
 add_dependencies(${LIB_NAME} ${GEN_NAME})
 set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(${LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(
     ${LIB_NAME}
-    PUBLIC ${SRC_DIR} ${RAW_INCLUDE_DIR} ${GEN_OUT_DIR}
-    PRIVATE ${RAW_INCLUDE_DIR}/steam)
+    PUBLIC ${CAULK_SRC_DIR} ${SDK_INCLUDE_DIR} ${GEN_OUT_DIR}
+    PRIVATE ${SDK_INCLUDE_DIR}/steam)
 
-set(DYLIB_ROOT ${RAW_ROOT}/redistributable_bin)
+set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
 if(WIN32)
     set(STEAM_LIB "win64/steam_api64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
@@ -108,7 +105,7 @@ endfunction()
 set(TEST_NAME ${LIB_NAME}Test)
 option(CAULK_BUILD_TEST "Build the ${TEST_NAME} executable?" ON)
 if(CAULK_BUILD_TEST)
-    add_executable(${TEST_NAME} ${SRC_DIR}/test.c)
+    add_executable(${TEST_NAME} ${CAULK_SRC_DIR}/test.c)
     set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
     caulk_register(${TEST_NAME})
 endif()
