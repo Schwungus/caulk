@@ -8,7 +8,7 @@ Refer to the [usage section](#usage) and the [code example](src/test.c) for a qu
 
 ## Rationale
 
-The Steamworks SDK provides the header `steam_api_flat.h` which declares interoperable interface functions. However it isn't pure C, leading to build errors. This library mitigates that by generating plain-C bindings to those functions with the help of `steam_api.json`.
+The Steamworks SDK provides the header `steam_api_flat.h` which declares interoperable interface functions. However, it isn't pure C, leading to build errors (duh). This library mitigates that by generating a plain-C compatibility layer to C++ types, functions, and methods defined in the SDK, with the help of `steam_api.json`.
 
 ## Usage
 
