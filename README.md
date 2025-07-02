@@ -1,5 +1,7 @@
 # caulk
 
+<img align="right" height="128" src="assets/huge-caulk.png" alt="A splatter of caulk paste">
+
 caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C. Capische?
 
 Refer to the [usage section](#usage) and the [code example](src/test.c) for a quick rundown.
