@@ -14,7 +14,7 @@
 int main(int argc, char* argv[]) {
 	printf("==========\n");
 	printf("CAULK TEST\n");
-	printf("==========\n");
+	printf("==========\n\n");
 
 	if (!caulk_Init()) {
 		printf("ERROR: No caulk here, try opening Steam.\n");
@@ -29,16 +29,13 @@ int main(int argc, char* argv[]) {
 	);
 
 	int numFriends = caulk_ISteamFriends_GetFriendCount(steamFriends, k_EFriendFlagImmediate);
-	printf("You have %d friends", numFriends);
-	if (numFriends) {
-		printf(":\n");
-		for (int i = 0; i < numFriends; i++) {
-			CSteamID friend = caulk_ISteamFriends_GetFriendByIndex(steamFriends, i, k_EFriendFlagImmediate);
-			const char* friendName = caulk_ISteamFriends_GetFriendPersonaName(steamFriends, friend);
-			printf("%d. %s (%lu)\n", i + 1, friendName, friend);
-		}
-	} else
-		printf(", ...huh.\n");
+	printf("You have %d friends%s\n", numFriends, numFriends ? ":" : ", ...huh");
+
+	for (int i = 0; i < numFriends; i++) {
+		CSteamID friend = caulk_ISteamFriends_GetFriendByIndex(steamFriends, i, k_EFriendFlagImmediate);
+		const char* friendName = caulk_ISteamFriends_GetFriendPersonaName(steamFriends, friend);
+		printf("%d. %s (%lu)\n", i + 1, friendName, friend);
+	}
 
 	fflush(stdout);
 	sleepSecs(5);

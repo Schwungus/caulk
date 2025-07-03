@@ -17,7 +17,7 @@ if(NOT DEFINED STEAMWORKS_SDK_ZIP)
     set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip)
 endif()
 if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
-    message(FATAL_ERROR "You forgot to specify a path to Steamworks SDK .zip! Review the project's README")
+    message(FATAL_ERROR "You forgot to specify a path to Steamworks SDK .zip! Review caulk's README")
 endif()
 
 if(NOT DEFINED STEAM_APPID)
