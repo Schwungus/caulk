@@ -41,16 +41,16 @@ static const char* fieldName(const char* field, const char* master) {
 	return buf;
 }
 
-static const char* sanitizeType(const char* weee) {
+static const char* sanitizeType(const char* type) {
 	static char buf[1024] = {0};
 	size_t i = 0;
-	for (; i < strlen(weee); i++)
-		if (weee[i] == ':')
+	for (; i < strlen(type); i++)
+		if (type[i] == ':')
 			buf[i] = '_';
-		else if (weee[i] == '&')
+		else if (type[i] == '&')
 			buf[i] = '*';
 		else
-			buf[i] = weee[i];
+			buf[i] = type[i];
 	buf[i] = '\0';
 	return buf;
 }
@@ -92,8 +92,8 @@ static const char* structName(yyjson_val* type) {
 	return master;
 }
 
-static int isConstructor(yyjson_val* met) {
-	return strstr(yyjson_get_str(yyjson_obj_get(met, "methodname_flat")), "Construct") != NULL;
+static int isConstructor(yyjson_val* method) {
+	return strstr(yyjson_get_str(yyjson_obj_get(method, "methodname_flat")), "Construct") != NULL;
 }
 
 static void declareEnum(yyjson_val* enm, const char* master) {
@@ -240,19 +240,19 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 	fprintf(out, ")");
 }
 
-static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
-	const char* mastName = structName(tMaster);
-	const char* metName = yyjson_get_str(yyjson_obj_get(met, "methodname"));
-	const char* metType = yyjson_get_str(yyjson_obj_get(met, "returntype"));
+static void wrapMethod(yyjson_val* master, yyjson_val* method) {
+	const char* mastName = structName(master);
+	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname"));
+	const char* metType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
 
-	writeMethodSignature(hOutput, tMaster, met);
+	writeMethodSignature(hOutput, master, method);
 	fprintf(hOutput, ";\n");
 
-	writeMethodSignature(cOutput, tMaster, met);
+	writeMethodSignature(cOutput, master, method);
 	fprintf(cOutput, " {\n");
 
-	yyjson_val* params = yyjson_obj_get(met, "params");
-	if (isConstructor(met))
+	yyjson_val* params = yyjson_obj_get(method, "params");
+	if (isConstructor(method))
 		metType = mastName;
 
 	yyjson_val* arg = NULL;
@@ -277,7 +277,7 @@ static void wrapMethod(yyjson_val* tMaster, yyjson_val* met) {
 	if (!retVoid)
 		fprintf(cOutput, "%s " RESULT " = ", metType);
 
-	if (isConstructor(met))
+	if (isConstructor(method))
 		fprintf(cOutput, "%s(", metType);
 	else
 		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", mastName, metName);
@@ -378,13 +378,13 @@ static void genMethods(yyjson_val* master) {
 		yyjson_arr_iter iter;
 		yyjson_arr_iter_init(yyjson_obj_get(master, wrapper->arrayName), &iter);
 
-		yyjson_val* met = NULL;
-		while ((met = yyjson_arr_iter_next(&iter)) != NULL) {
-			const char* name = yyjson_get_str(yyjson_obj_get(met, wrapper->flatnameField));
+		yyjson_val* method = NULL;
+		while ((method = yyjson_arr_iter_next(&iter)) != NULL) {
+			const char* name = yyjson_get_str(yyjson_obj_get(method, wrapper->flatnameField));
 			for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
 				if (strstr(name, ignoreForMethods[i]) != NULL)
 					goto next;
-			wrapper->wrap(master, met);
+			wrapper->wrap(master, method);
 		next:
 			continue;
 		}
@@ -472,10 +472,8 @@ int main(int argc, char* argv[]) {
 	if (hOutput == NULL || cOutput == NULL)
 		return EXIT_FAILURE;
 
-	yyjson_arr_iter iter;
 	yyjson_read_flag flg = YYJSON_READ_ALLOW_COMMENTS | YYJSON_READ_ALLOW_TRAILING_COMMAS;
 	yyjson_read_err err;
-
 	gDoc = yyjson_read_file(argv[3], flg, NULL, &err);
 	if (gDoc == NULL)
 		return EXIT_FAILURE;
