@@ -458,6 +458,12 @@ static void genTypedefs() {
 	fprintf(hOutput, "\n#endif\n\n");
 }
 
+static void genCallbackId(yyjson_val* struc) {
+	int id = yyjson_get_int(yyjson_obj_get(struc, "callback_id"));
+	if (id)
+		fprintf(hOutput, "#define %s_iCallback %d\n", structName(struc), id);
+}
+
 static void genStructs() {
 	static const char* sources[] = {"structs", "callback_structs", "interfaces"};
 	for (size_t i = 0; i < LENGTH(sources); i++) {
@@ -468,6 +474,7 @@ static void genStructs() {
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
 			genFields(struc);
 			genMethods(struc);
+			genCallbackId(struc);
 		}
 	}
 }

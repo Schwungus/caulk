@@ -12,7 +12,7 @@ bool caulk_Init() {
 	bool result = SteamAPI_Init();
 	if (result) {
 		SteamAPI_ManualDispatch_Init();
-		caulk_Register(SteamAPICallCompleted_t::k_iCallback, onResolveCall);
+		caulk_Register(SteamAPICallCompleted_t_iCallback, onResolveCall);
 	}
 	return result;
 }
