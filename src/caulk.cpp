@@ -6,13 +6,13 @@
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
 extern "C" {
-static void onResolveCall(void*);
+static void onCallCompleted(void*);
 
 bool caulk_Init() {
 	bool result = SteamAPI_Init();
 	if (result) {
 		SteamAPI_ManualDispatch_Init();
-		caulk_Register(SteamAPICallCompleted_t_iCallback, onResolveCall);
+		caulk_Register(SteamAPICallCompleted_t_iCallback, onCallCompleted);
 	}
 	return result;
 }
@@ -75,7 +75,7 @@ static void dispatchResultHandler(SteamAPICall_t call, void* result, bool ioFail
 	}
 }
 
-static void onResolveCall(void* data) {
+static void onCallCompleted(void* data) {
 	HSteamPipe hSteamPipe = SteamAPI_GetHSteamPipe();
 
 	SteamAPICallCompleted_t* pCallback = reinterpret_cast<SteamAPICallCompleted_t*>(data);
@@ -97,10 +97,9 @@ void caulk_Dispatch() {
 	CallbackMsg_t callback;
 	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, &callback)) {
 		for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-			struct CallbackHandler* perdun = &callbackHandlers[idx];
-			if (perdun->registered && perdun->callback == callback.m_cubParam) {
-				perdun->registered = false;
-				perdun->fn(callback.m_pubParam);
+			struct CallbackHandler* iter = &callbackHandlers[idx];
+			if (iter->registered && iter->callback == callback.m_iCallback) {
+				iter->fn(callback.m_pubParam);
 				break;
 			}
 		}
