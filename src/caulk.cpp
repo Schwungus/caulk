@@ -43,8 +43,7 @@ static void dispatchFrFr(SteamAPICall_t call, void* result, bool ioFailed) {
 		struct Vutton* vutton = &iCouldHaveMyGucciOn[idx];
 		if (vutton->registered && vutton->call == call) {
 			vutton->registered = false;
-			if (!ioFailed)
-				vutton->handler(result);
+			vutton->handler(result, ioFailed);
 			return;
 		}
 	}
