@@ -125,6 +125,9 @@ static void genEnums(yyjson_val* enums, const char* master) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(enums, &iter);
 
+	if (yyjson_get_len(enums))
+		fprintf(hOutput, "#ifndef CAULK_INTERNAL\n");
+
 	yyjson_val* enm = NULL;
 	while ((enm = yyjson_arr_iter_next(&iter)) != NULL) {
 		declareEnum(enm, master);
@@ -132,7 +135,7 @@ static void genEnums(yyjson_val* enums, const char* master) {
 	}
 
 	if (yyjson_get_len(enums))
-		fprintf(hOutput, "\n");
+		fprintf(hOutput, "#endif\n");
 }
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
@@ -157,6 +160,7 @@ static void genFields(yyjson_val* struc) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(fields, &iter);
 
+	fprintf(hOutput, "#ifndef CAULK_INTERNAL\n");
 	fprintf(hOutput, "struct %s {\n", structName(struc));
 
 	yyjson_val* field = NULL;
@@ -171,6 +175,7 @@ static void genFields(yyjson_val* struc) {
 	}
 
 	fprintf(hOutput, "};\n");
+	fprintf(hOutput, "#endif\n");
 }
 
 static void writeParams(FILE* out, yyjson_val* params) {
@@ -414,6 +419,8 @@ static void genTypedefs() {
 	static const char* sources[] = {"structs", "callback_structs", [SPECIAL] = "interfaces"};
 	yyjson_arr_iter iter;
 
+	fprintf(hOutput, "#ifndef CAULK_INTERNAL\n\n");
+
 	for (size_t i = 0; i < LENGTH(sources); i++) {
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
@@ -447,6 +454,8 @@ static void genTypedefs() {
 		writeDecl(hOutput, name, type, false);
 		fprintf(hOutput, ";\n");
 	}
+
+	fprintf(hOutput, "\n#endif\n\n");
 }
 
 static void genStructs() {
@@ -483,10 +492,12 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "#include <stdint.h>\n");
 	fprintf(hOutput, "#include <stdbool.h>\n\n");
 
+	fprintf(hOutput, "#ifndef CAULK_INTERNAL\n");
 	fprintf(hOutput, "typedef uint32_t enum32_t;\n");
 	fprintf(hOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
 	fprintf(hOutput, "typedef uint64_t CSteamID, CGameID;\n");
-	fprintf(hOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n\n");
+	fprintf(hOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n");
+	fprintf(hOutput, "#endif\n\n");
 
 	fprintf(cOutput, "#include \"steam_api.h\"\n\n");
 
