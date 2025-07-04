@@ -22,7 +22,7 @@ extern "C" {
 
 #include "__gen.h"
 
-typedef void (*GucciHandler)(void*, bool);
+typedef void (*GucciHandler)(void*);
 
 bool caulk_Init();
 void caulk_Shutdown();
