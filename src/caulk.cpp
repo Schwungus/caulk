@@ -54,22 +54,25 @@ void caulk_Dispatch() {
 	HSteamPipe hSteamPipe = SteamAPI_GetHSteamPipe();
 	SteamAPI_ManualDispatch_RunFrame(hSteamPipe);
 
-	CallbackMsg_t callback, *pCallback = &callback;
-	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, pCallback)) {
-		if (callback.m_iCallback == SteamAPICallCompleted_t::k_iCallback) {
-			SteamAPICallCompleted_t* pCallCompleted = reinterpret_cast<SteamAPICallCompleted_t*>(pCallback);
-			void* callResult = caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
-
-			bool bFailed;
-			if (SteamAPI_ManualDispatch_GetAPICallResult(
-				hSteamPipe, pCallCompleted->m_hAsyncCall, callResult, pCallback->m_cubParam,
-				pCallback->m_iCallback, &bFailed
-			    ))
-				dispatchFrFr(pCallCompleted->m_hAsyncCall, callResult, bFailed);
-
-			caulk_Free(callResult);
+	CallbackMsg_t callback;
+	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, &callback)) {
+		if (callback.m_iCallback != SteamAPICallCompleted_t::k_iCallback) {
 			SteamAPI_ManualDispatch_FreeLastCallback(hSteamPipe);
+			continue;
 		}
+
+		SteamAPICallCompleted_t* pCallback = reinterpret_cast<SteamAPICallCompleted_t*>(callback.m_pubParam);
+		void* callResult = caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
+
+		bool bFailed;
+		if (SteamAPI_ManualDispatch_GetAPICallResult(
+			hSteamPipe, pCallback->m_hAsyncCall, callResult, pCallback->m_cubParam, pCallback->m_iCallback,
+			&bFailed
+		    ))
+			dispatchFrFr(pCallback->m_hAsyncCall, callResult, bFailed);
+
+		caulk_Free(callResult);
+		SteamAPI_ManualDispatch_FreeLastCallback(hSteamPipe);
 	}
 }
 }
