@@ -6,7 +6,7 @@ caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve
 
 Refer to the [usage section](#basic-usage) and the [code example](src/caulk-test.c) for a quick rundown.
 
-[Schwungus](https://github.com/Schwungus)-certified.
+:heavy_check_mark: [Schwungus](https://github.com/Schwungus)-certified.
 
 ## Rationale
 
