@@ -12,7 +12,7 @@ Refer to the [usage section](#usage) and the [code example](src/caulk-test.c) fo
 
 The Steamworks SDK provides the header `steam_api_flat.h` which declares interoperable interface functions. However, it isn't pure C, leading to build errors (duh). This library mitigates that by generating a plain-C compatibility layer to C++ types, functions, and methods defined in the SDK, with the help of `steam_api.json`.
 
-## Usage
+## Basic usage
 
 caulk requires a [ZIP of the Steamworks SDK](https://partner.steamgames.com/downloads/steamworks_sdk_162.zip) in your project's root. Click that link to semi-legally download it.
 
@@ -56,3 +56,48 @@ int main(int argc, char* argv[]) {
 ```
 
 Again, see [test.c](src/caulk-test.c) for a more complete example.
+
+## Callbacks and call results
+
+The Steamworks API relies a lot on callbacks and call results. Here's how to use them.
+
+If a method returns `SteamAPICall_t` instead of giving you the desired result, it must be an asynchronous call which will spit out a value _eventually_. To use said value, you'll have to define a handler function using `caulk_Resolve()`, which is called by `caulk_Dispatch()` whenever your result is ready.
+
+Also, you'll be receiving a lot of events from Steamworks. To make any use of them, you'll have to register handlers using `caulk_Register()`.
+
+See the example below for both `caulk_Resolve()` and `caulk_Register()`:
+
+```c
+#include <stdlib.h>
+#include "caulk.h"
+
+static void resolveCreateLobby(void* pData, bool ioFail) {
+    LobbyCreated_t* data = pData;
+    if (!ioFail && data->m_eResult == k_EResultOK)
+        printf("Created lobby ID=%d!!!\n", data->m_ulSteamIDLobby);
+}
+
+static void onEnterLobby(void* pData) {
+    LobbyEnter_t* data = pData;
+    // Do cool stuff with `data`.
+}
+
+int main(int argc, char* argv[]) {
+    if (!caulk_Init())
+        return EXIT_FAILURE;
+
+    // Call `onEnterLobby()` every time we enter a lobby.
+    caulk_Register(LobbyEnter_t_iCallback, onEnterLobby);
+
+    // Let a lobby be created in the background, and run `resolveCreateLobby()` when it's done.
+    SteamAPICall_t cb = caulk_ISteamMatchmaking_CreateLobby(mm, k_ELobbyTypeFriendsOnly, 2);
+    caulk_Resolve(cb, resolveCreateLobby);
+
+    for (;;)
+        // Dispatch the registered handlers:
+        caulk_Dispatch(); // should put a `Sleep` here or smth...
+
+    caulk_Shutdown();
+    return EXIT_SUCCESS;
+}
+```
