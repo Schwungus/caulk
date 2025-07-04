@@ -4,7 +4,7 @@
 
 caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C. Capische?
 
-Refer to the [usage section](#usage) and the [code example](src/test.c) for a quick rundown.
+Refer to the [usage section](#usage) and the [code example](src/caulk-test.c) for a quick rundown.
 
 [Schwungus](https://github.com/Schwungus)-certified.
 
@@ -55,4 +55,4 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-Again, see [test.c](src/test.c) for a more complete example.
+Again, see [test.c](src/caulk-test.c) for a more complete example.
