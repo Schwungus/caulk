@@ -13,16 +13,16 @@ FetchContent_Declare(
     GIT_TAG "0.11.1")
 FetchContent_MakeAvailable(yyjson)
 
-if(NOT DEFINED STEAMWORKS_SDK_ZIP)
-    set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip)
-endif()
+set(STEAMWORKS_SDK_ZIP
+    ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip
+    CACHE STRING "Path to Steamworks SDK (zip)")
 if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
     message(FATAL_ERROR "You forgot to specify a path to Steamworks SDK .zip! Review caulk's README")
 endif()
 
-if(NOT DEFINED STEAM_APPID)
-    set(STEAM_APPID ${CMAKE_SOURCE_DIR}/steam_appid.txt)
-endif()
+set(STEAM_APPID
+    ${CMAKE_SOURCE_DIR}/steam_appid.txt
+    CACHE STRING "Path to steam_appid.txt")
 if(NOT EXISTS ${STEAM_APPID})
     message(FATAL_ERROR "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
 endif()
@@ -38,12 +38,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(LIB_NAME ${PROJECT_NAME})
+set(CAULK_LIB_NAME
+    ${PROJECT_NAME}
+    CACHE INTERNAL "caulk library target name")
 set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
 set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
 set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(GEN_NAME ${LIB_NAME}GenBindings)
+set(GEN_NAME ${CAULK_LIB_NAME}GenBindings)
 add_executable(${GEN_NAME} ${CAULK_SRC_DIR}/caulk-gen.c)
 target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 
@@ -58,38 +60,41 @@ add_custom_command(
     COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${SDK_INCLUDE_DIR}/steam/steam_api.json
     BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT})
 
-add_library(${LIB_NAME} ${CAULK_SRC_DIR}/caulk.h ${CAULK_SRC_DIR}/caulk.cpp ${GEN_H_OUT} ${GEN_C_OUT})
-add_dependencies(${LIB_NAME} ${GEN_NAME})
-set_target_properties(${LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
-target_compile_definitions(${LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
+add_library(${CAULK_LIB_NAME} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
+add_dependencies(${CAULK_LIB_NAME} ${GEN_NAME})
+set_target_properties(${CAULK_LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
+target_compile_definitions(${CAULK_LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(
-    ${LIB_NAME}
-    PUBLIC ${CAULK_SRC_DIR} ${SDK_INCLUDE_DIR} ${GEN_OUT_DIR}
-    PRIVATE ${SDK_INCLUDE_DIR}/steam)
+    ${CAULK_LIB_NAME}
+    INTERFACE $<BUILD_INTERFACE:${CAULK_SRC_DIR}>
+    PUBLIC ${GEN_OUT_DIR}
+    PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
 
 set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
+set(CAULK_COPY_DLL CACHE INTERNAL "SteamAPI dynamic library to copy to output")
+
 if(WIN32)
     set(STEAM_LIB "win64/steam_api64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "steam_api")
     endif()
     set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}.dll)
-    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
+    target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
 elseif(LINUX)
     set(STEAM_LIB "linux64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "linux32")
     endif()
     set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
-    target_link_libraries(${LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
+    target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
 else()
-    target_link_libraries(${LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
+    target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
 endif()
 
 function(caulk_register TGT)
-    target_link_libraries(${TGT} ${LIB_NAME})
+    target_link_libraries(${TGT} ${CAULK_LIB_NAME})
 
-    if(DEFINED CAULK_COPY_DLL)
+    if(CAULK_COPY_DLL)
         add_custom_command(
             TARGET ${TGT}
             POST_BUILD
@@ -102,7 +107,7 @@ function(caulk_register TGT)
         COMMAND ${CMAKE_COMMAND} -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
 endfunction()
 
-set(TEST_NAME ${LIB_NAME}Test)
+set(TEST_NAME ${CAULK_LIB_NAME}Test)
 option(CAULK_BUILD_TEST "Build the ${TEST_NAME} executable?" ON)
 if(CAULK_BUILD_TEST)
     add_executable(${TEST_NAME} ${CAULK_SRC_DIR}/caulk-test.c)
