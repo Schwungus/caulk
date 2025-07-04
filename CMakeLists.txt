@@ -71,21 +71,23 @@ target_include_directories(
     PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
 
 set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
-set(CAULK_COPY_DLL CACHE INTERNAL "SteamAPI dynamic library to copy to output")
-
 if(WIN32)
     set(STEAM_LIB "win64/steam_api64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "steam_api")
     endif()
-    set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}.dll)
+    set(CAULK_COPY_DLL
+        ${DYLIB_ROOT}/${STEAM_LIB}.dll
+        CACHE INTERNAL "")
     target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${DYLIB_ROOT}/${STEAM_LIB}.lib)
 elseif(LINUX)
     set(STEAM_LIB "linux64")
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
         set(STEAM_LIB "linux32")
     endif()
-    set(CAULK_COPY_DLL ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so)
+    set(CAULK_COPY_DLL
+        ${DYLIB_ROOT}/${STEAM_LIB}/libsteam_api.so
+        CACHE INTERNAL "")
     target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
 else()
     target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${DYLIB_ROOT}/osx/libsteam_api.dylib)
@@ -94,7 +96,7 @@ endif()
 function(caulk_register TGT)
     target_link_libraries(${TGT} ${CAULK_LIB_NAME})
 
-    if(CAULK_COPY_DLL)
+    if(DEFINED CAULK_COPY_DLL)
         add_custom_command(
             TARGET ${TGT}
             POST_BUILD
