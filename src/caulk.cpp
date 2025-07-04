@@ -3,6 +3,8 @@
 #define CAULK_INTERNAL
 #include "caulk.h"
 
+#define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
+
 extern "C" {
 bool caulk_Init() {
 	bool result = SteamAPI_Init();
@@ -15,48 +17,33 @@ void caulk_Shutdown() {
 	SteamAPI_Shutdown();
 }
 
-#define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
-
 struct Vutton {
+	GucciHandler handler;
 	SteamAPICall_t call;
 	bool registered : 1;
-	bool gucci : 1;
-	bool ioFailed : 1;
 };
 
 static struct Vutton iCouldHaveMyGucciOn[2048] = {0};
-bool caulk_Gucci(SteamAPICall_t call) {
-	for (size_t idx = 0; idx < LENGTH(iCouldHaveMyGucciOn); idx++) {
-		struct Vutton* vutton = &iCouldHaveMyGucciOn[idx];
-		if (!vutton->registered || vutton->call != call)
-			continue;
-		if (vutton->gucci) {
-			vutton->registered = 0;
-			vutton->gucci = 0;
-			return !vutton->ioFailed;
-		} else
-			return false;
-	}
-
+void caulk_Gucci(SteamAPICall_t call, GucciHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(iCouldHaveMyGucciOn); idx++) {
 		struct Vutton* vutton = &iCouldHaveMyGucciOn[idx];
 		if (!vutton->registered) {
+			vutton->handler = handler;
 			vutton->registered = true;
 			vutton->call = call;
-			vutton->gucci = 0;
-			return false;
+			return;
 		}
 	}
 
-	return false;
+	// shit we ran out o fslots.........
 }
 
-static void makeGucci(SteamAPICall_t call, bool ioFailed) {
+static void dispatchFrFr(SteamAPICall_t call, void* result, bool ioFailed) {
 	for (size_t idx = 0; idx < LENGTH(iCouldHaveMyGucciOn); idx++) {
 		struct Vutton* vutton = &iCouldHaveMyGucciOn[idx];
-		if (vutton->call == call && vutton->registered) {
-			vutton->gucci = 1;
-			vutton->ioFailed = ioFailed;
+		if (vutton->registered && vutton->call == call) {
+			vutton->registered = false;
+			vutton->handler(result, ioFailed);
 			return;
 		}
 	}
@@ -70,17 +57,16 @@ void caulk_Dispatch() {
 	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, pCallback)) {
 		if (callback.m_iCallback == SteamAPICallCompleted_t::k_iCallback) {
 			SteamAPICallCompleted_t* pCallCompleted = reinterpret_cast<SteamAPICallCompleted_t*>(pCallback);
-			void* pTmpCallResult =
-			    caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
+			void* callResult = caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
 
 			bool bFailed;
 			if (SteamAPI_ManualDispatch_GetAPICallResult(
-				hSteamPipe, pCallCompleted->m_hAsyncCall, pTmpCallResult, pCallback->m_cubParam,
+				hSteamPipe, pCallCompleted->m_hAsyncCall, callResult, pCallback->m_cubParam,
 				pCallback->m_iCallback, &bFailed
 			    ))
-				makeGucci(pCallCompleted->m_hAsyncCall, bFailed);
+				dispatchFrFr(pCallCompleted->m_hAsyncCall, callResult, bFailed);
 
-			caulk_Free(pTmpCallResult);
+			caulk_Free(callResult);
 			SteamAPI_ManualDispatch_FreeLastCallback(hSteamPipe);
 		}
 	}

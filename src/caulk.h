@@ -22,10 +22,12 @@ extern "C" {
 
 #include "__gen.h"
 
+typedef void (*GucciHandler)(void*, bool);
+
 bool caulk_Init();
 void caulk_Shutdown();
 
-bool caulk_Gucci(SteamAPICall_t);
+void caulk_Gucci(SteamAPICall_t call, GucciHandler handler);
 void caulk_Dispatch();
 
 #ifdef __cplusplus
