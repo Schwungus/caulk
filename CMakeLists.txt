@@ -73,30 +73,39 @@ target_include_directories(
 set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
 if(WIN32)
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/steam_api.dll)
+        set(CAULK_LINK_AGAINST
+            ${DYLIB_ROOT}/steam_api.lib
+            CACHE INTERNAL "")
+        set(CAULK_COPY_DLL
+            ${DYLIB_ROOT}/steam_api.dll
+            CACHE INTERNAL "")
     else()
-        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/win64/steam_api64.dll)
+        set(CAULK_LINK_AGAINST
+            ${DYLIB_ROOT}/win64/steam_api64.lib
+            CACHE INTERNAL "")
+        set(CAULK_COPY_DLL
+            ${DYLIB_ROOT}/win64/steam_api64.dll
+            CACHE INTERNAL "")
     endif()
-
-    set(CAULK_COPY_DLL
-        ${STEAMWORKS_DLL_PATH}
-        CACHE INTERNAL "")
-elseif(UNIX)
-    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux32/libsteam_api.so)
-    else()
-        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux64/libsteam_api.so)
-    endif()
-
-    set(CAULK_COPY_DLL
-        ${STEAMWORKS_DLL_PATH}
-        CACHE INTERNAL "")
 else()
+    if(LINUX)
+        if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+            set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux32/libsteam_api.so)
+        else()
+            set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux64/libsteam_api.so)
+        endif()
+    else()
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/osx/libsteam_api.dylib)
+    endif()
+
     set(CAULK_COPY_DLL
-        ${DYLIB_ROOT}/osx/libsteam_api.dylib
+        ${STEAMWORKS_DLL_PATH}
+        CACHE INTERNAL "")
+    set(CAULK_LINK_AGAINST
+        ${CAULK_COPY_DLL}
         CACHE INTERNAL "")
 endif()
-target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
+target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_LINK_AGAINST})
 
 function(caulk_register TGT)
     target_link_libraries(${TGT} ${CAULK_LIB_NAME})
