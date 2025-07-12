@@ -60,45 +60,6 @@ add_custom_command(
     COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${SDK_INCLUDE_DIR}/steam/steam_api.json
     BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT})
 
-set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
-if(WIN32)
-    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-        set(STEAM_API_PATH ${DYLIB_ROOT})
-        set(STEAM_API_NAME steam_api)
-    else()
-        set(STEAM_API_PATH ${DYLIB_ROOT}/win64)
-        set(STEAM_API_NAME steam_api64)
-    endif()
-
-    set(CAULK_COPY_DLL
-        ${STEAM_API_PATH}/${STEAM_API_NAME}.dll
-        CACHE INTERNAL "")
-elseif(UNIX)
-    set(STEAM_API_NAME steam_api)
-    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-        set(STEAM_API_PATH ${DYLIB_ROOT}/linux32)
-        set(STEAM_API_NAME steam_api)
-    else()
-        set(STEAM_API_PATH ${DYLIB_ROOT}/linux64)
-    endif()
-
-    set(CAULK_COPY_DLL
-        ${STEAM_API_PATH}/libsteam_api.so
-        CACHE INTERNAL "")
-else()
-    set(STEAM_API_PATH ${DYLIB_ROOT}/osx)
-    set(STEAM_API_NAME steam_api)
-    set(CAULK_COPY_DLL
-        ${STEAM_API_PATH}/libsteam_api.dylib
-        CACHE INTERNAL "")
-endif()
-
-find_library(
-    STEAM_API_LIBRARY
-    NAMES ${STEAM_API_NAME}
-    PATHS ${STEAM_API_PATH}
-    NO_DEFAULT_PATH)
-
 add_library(${CAULK_LIB_NAME} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
 add_dependencies(${CAULK_LIB_NAME} ${GEN_NAME})
 set_target_properties(${CAULK_LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
@@ -108,22 +69,47 @@ target_include_directories(
     INTERFACE $<BUILD_INTERFACE:${CAULK_SRC_DIR}>
     PUBLIC ${GEN_OUT_DIR}
     PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
-target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${STEAM_API_LIBRARY})
 
-if(DEFINED CAULK_COPY_DLL)
-    add_custom_command(
-        TARGET ${CAULK_LIB_NAME}
-        PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CAULK_COPY_DLL} ${CMAKE_CURRENT_BINARY_DIR})
+set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
+if(WIN32)
+    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/steam_api.dll)
+    else()
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/win64/steam_api64.dll)
+    endif()
+
+    set(CAULK_COPY_DLL
+        ${STEAMWORKS_DLL_PATH}
+        CACHE INTERNAL "")
+elseif(UNIX)
+    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux32/libsteam_api.so)
+    else()
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux64/libsteam_api.so)
+    endif()
+
+    set(CAULK_COPY_DLL
+        ${STEAMWORKS_DLL_PATH}
+        CACHE INTERNAL "")
+else()
+    set(CAULK_COPY_DLL
+        ${DYLIB_ROOT}/osx/libsteam_api.dylib
+        CACHE INTERNAL "")
 endif()
+target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_COPY_DLL})
 
 function(caulk_register TGT)
     target_link_libraries(${TGT} ${CAULK_LIB_NAME})
 
+    # Stupid dwarf trick for dynamically linked SteamAPI to work...
+    if(UNIX)
+        set_property(TARGET ${TGT} PROPERTY LINK_FLAGS "-Wl,-rpath='$ORIGIN',-rpath-link='$ORIGIN'")
+    endif()
+
     if(DEFINED CAULK_COPY_DLL)
         add_custom_command(
             TARGET ${TGT}
-            POST_BUILD
+            PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
     endif()
 
