@@ -108,8 +108,6 @@ endif()
 target_link_libraries(${CAULK_LIB_NAME} PUBLIC ${CAULK_LINK_AGAINST})
 
 function(caulk_register TGT)
-    target_link_libraries(${TGT} ${CAULK_LIB_NAME})
-
     # Stupid dwarf trick for dynamically linked SteamAPI to work...
     if(UNIX)
         set_property(TARGET ${TGT} PROPERTY LINK_FLAGS "-Wl,-rpath='$ORIGIN',-rpath-link='$ORIGIN'")
@@ -134,4 +132,5 @@ if(CAULK_BUILD_TEST)
     add_executable(${TEST_NAME} ${CAULK_SRC_DIR}/caulk-test.c)
     set_target_properties(${TEST_NAME} PROPERTIES LINKER_LANGUAGE C)
     caulk_register(${TEST_NAME})
+    target_link_libraries(${TEST_NAME} PRIVATE ${CAULK_LIB_NAME})
 endif()
