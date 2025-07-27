@@ -2,9 +2,9 @@
 
 #if !defined(caulk_Malloc) || !defined(caulk_Free)
 #ifdef __cplusplus
-#include <cstdlib>
+#include <cstdlib> // IWYU pragma: keep
 #else
-#include <stdlib.h>
+#include <stdlib.h> // IWYU pragma: keep
 #endif
 #endif
 

@@ -1,0 +1,15 @@
+Checks: |
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  bugprone-*,
+  -bugprone-narrowing-conversions,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-assignment-in-if-condition,
+  modernize-*,
+  -modernize-avoid-c-style,
+  misc-*,
+  -misc-unused-parameters,
+  -misc-use-anonymous-namespace,
+  performance-*,
+  -performance-no-int-to-ptr,
+  portability-*
