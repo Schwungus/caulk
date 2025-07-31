@@ -52,8 +52,11 @@ target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
 file(MAKE_DIRECTORY ${GEN_OUT_DIR})
 
+set(GEN_OUT_DIR_PUB ${CMAKE_BINARY_DIR}/steamworksgen-pub)
+file(MAKE_DIRECTORY ${GEN_OUT_DIR_PUB})
+
 set(GEN_GLUE_OUT ${GEN_OUT_DIR}/__gen.h)
-set(GEN_H_OUT ${GEN_OUT_DIR}/caulk.h)
+set(GEN_H_OUT ${GEN_OUT_DIR_PUB}/caulk.h)
 set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 
 add_custom_command(
@@ -68,7 +71,8 @@ set_target_properties(${CAULK_LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(${CAULK_LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(
     ${CAULK_LIB_NAME}
-    PUBLIC ${GEN_OUT_DIR}
+    PUBLIC ${GEN_OUT_DIR_PUB}
+    INTERFACE ${GEN_OUT_DIR}
     PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
 
 set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
