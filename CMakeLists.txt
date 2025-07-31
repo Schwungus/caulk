@@ -52,13 +52,15 @@ target_link_libraries(${GEN_NAME} PRIVATE yyjson)
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
 file(MAKE_DIRECTORY ${GEN_OUT_DIR})
 
-set(GEN_H_OUT ${GEN_OUT_DIR}/__gen.h)
+set(GEN_GLUE_OUT ${GEN_OUT_DIR}/__gen.h)
+set(GEN_H_OUT ${GEN_OUT_DIR}/caulk.h)
 set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
+
 add_custom_command(
     TARGET ${GEN_NAME}
     POST_BUILD
-    COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_H_OUT} ${GEN_C_OUT} ${SDK_INCLUDE_DIR}/steam/steam_api.json
-    BYPRODUCTS ${GEN_H_OUT} ${GEN_C_OUT})
+    COMMAND $<TARGET_FILE:${GEN_NAME}> ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT} ${SDK_INCLUDE_DIR}/steam/steam_api.json
+    BYPRODUCTS ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT})
 
 add_library(${CAULK_LIB_NAME} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
 add_dependencies(${CAULK_LIB_NAME} ${GEN_NAME})
@@ -66,7 +68,6 @@ set_target_properties(${CAULK_LIB_NAME} PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(${CAULK_LIB_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(
     ${CAULK_LIB_NAME}
-    INTERFACE $<BUILD_INTERFACE:${CAULK_SRC_DIR}>
     PUBLIC ${GEN_OUT_DIR}
     PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
 
