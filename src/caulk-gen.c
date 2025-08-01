@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,6 +205,11 @@ static const char* ignoreForMethods[] = {
     "SteamGameServer_v",	 "SteamGameServerStats_v",
 };
 
+enum {
+	methStruct,
+	methInterface,
+};
+
 static const char* normalizeMethodName(yyjson_val* method) {
 	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
 
@@ -214,7 +220,7 @@ static const char* normalizeMethodName(yyjson_val* method) {
 	return buf;
 }
 
-static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* method) {
+static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* method, int kind) {
 	const char* metName = normalizeMethodName(method);
 	static char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
@@ -235,30 +241,31 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 	deezPtr[i++] = '\0';
 
 	fprintf(out, "%s %s(", retType, metName);
-	writeDecl(out, THIS, deezPtr, false);
+	if (kind == methStruct)
+		writeDecl(out, THIS, deezPtr, false);
 
 	yyjson_val* params = yyjson_obj_get(method, "params");
-	if (yyjson_get_len(params))
+	if (kind == methStruct && yyjson_get_len(params))
 		fprintf(out, ", ");
 	writeParams(out, params);
 
 	fprintf(out, ")");
 }
 
-static void wrapMethod(yyjson_val* master, yyjson_val* method) {
-	const char* mastName = structName(master);
-	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname"));
-	const char* metType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
+static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
+	const char* masterName = structName(master);
+	const char* methodName = yyjson_get_str(yyjson_obj_get(method, "methodname"));
+	const char* returnType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
 
-	writeMethodSignature(glueOutput, master, method);
+	writeMethodSignature(glueOutput, master, method, kind);
 	fprintf(glueOutput, ";\n");
 
-	writeMethodSignature(cOutput, master, method);
+	writeMethodSignature(cOutput, master, method, kind);
 	fprintf(cOutput, " {\n");
 
 	yyjson_val* params = yyjson_obj_get(method, "params");
 	if (isConstructor(method))
-		metType = mastName;
+		returnType = masterName;
 
 	yyjson_val* arg = NULL;
 	yyjson_arr_iter iter;
@@ -276,16 +283,20 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method) {
 
 	yyjson_arr_iter_init(params, &iter);
 	size_t count = yyjson_get_len(params), idx = 0;
-	int retVoid = !strcmp(metType, "void");
+	int retVoid = !strcmp(returnType, "void");
 
 	fprintf(cOutput, INDENT);
 	if (!retVoid)
-		fprintf(cOutput, "%s " RESULT " = ", metType);
+		fprintf(cOutput, "%s " RESULT " = ", returnType);
 
 	if (isConstructor(method))
-		fprintf(cOutput, "%s(", metType);
-	else
-		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", mastName, metName);
+		fprintf(cOutput, "%s(", returnType);
+	else if (kind == methInterface) {
+		static char ctor[512] = {0};
+		strcpy(ctor, masterName + 1);
+		fprintf(cOutput, "%s()->%s(", ctor, methodName);
+	} else
+		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", masterName, methodName);
 
 	if (count)
 		fprintf(cOutput, "\n");
@@ -311,9 +322,17 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method) {
 	fprintf(cOutput, ");\n");
 
 	if (!retVoid)
-		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(metType));
+		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(returnType));
 
 	fprintf(cOutput, "}\n\n");
+}
+
+static void wrapStructMethod(yyjson_val* master, yyjson_val* method) {
+	wrapMethod(master, method, methStruct);
+}
+
+static void wrapInterfaceMethod(yyjson_val* master, yyjson_val* method) {
+	wrapMethod(master, method, methInterface);
 }
 
 static const char* normalizeAccessorName(yyjson_val* accessor) {
@@ -366,9 +385,21 @@ struct wrapper {
 	const char* flatnameField;
 };
 
-static void genMethods(yyjson_val* master) {
-	static const struct wrapper wrappers[] = {
-	    {"methods", wrapMethod, "methodname_flat"},
+static const char* nonApiInterfaces[] = {
+    "SteamMatchmakingServerListResponse", "SteamMatchmakingPingResponse", "SteamMatchmakingPlayersResponse",
+    "SteamMatchmakingRulesResponse"
+};
+
+static void genMethods(yyjson_val* master, bool isInterface) {
+	const char* masterName = yyjson_get_str(yyjson_obj_get(master, "classname"));
+	for (size_t i = 0; masterName != NULL && i < LENGTH(nonApiInterfaces); i++)
+		if (strstr(masterName, nonApiInterfaces[i])) {
+			isInterface = false;
+			break;
+		}
+
+	const struct wrapper wrappers[] = {
+	    {"methods", isInterface ? wrapInterfaceMethod : wrapStructMethod, "methodname_flat"},
 	    {"accessors", wrapAccessor, "name_flat"},
 	};
 
@@ -465,7 +496,8 @@ static void genCallbackId(yyjson_val* struc) {
 }
 
 static void genStructs() {
-	static const char* sources[] = {"structs", "callback_structs", "interfaces"};
+#define SPECIAL (2)
+	static const char* sources[] = {"structs", "callback_structs", [SPECIAL] = "interfaces"};
 	for (size_t i = 0; i < LENGTH(sources); i++) {
 		yyjson_arr_iter iter;
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
@@ -473,10 +505,11 @@ static void genStructs() {
 		yyjson_val* struc = NULL;
 		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
 			genFields(struc);
-			genMethods(struc);
+			genMethods(struc, i == SPECIAL);
 			genCallbackId(struc);
 		}
 	}
+#undef SPECIAL
 }
 
 int main(int argc, char* argv[]) {

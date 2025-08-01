@@ -5,6 +5,7 @@ Checks: |
   -bugprone-narrowing-conversions,
   -bugprone-easily-swappable-parameters,
   -bugprone-assignment-in-if-condition,
+  -bugprone-reserved-identifier,
   modernize-*,
   -modernize-avoid-c-style,
   misc-*,
