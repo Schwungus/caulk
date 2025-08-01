@@ -212,10 +212,13 @@ enum {
 
 static const char* normalizeMethodName(yyjson_val* method) {
 	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
+	const char* metStem = metName + strlen("SteamAPI_");
+	if (!strncmp(metStem, "ISteam", strlen("ISteam")))
+		metStem++;
 
 	static char buf[1024] = {0};
 	strcpy(buf, METHOD_PREFIX);
-	strcpy(buf + strlen(METHOD_PREFIX), metName + strlen("SteamAPI_"));
+	strcat(buf, metStem);
 
 	return buf;
 }

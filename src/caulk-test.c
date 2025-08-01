@@ -21,14 +21,14 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	printf("Logged in as %s (%lu)\n\n", caulk_ISteamFriends_GetPersonaName(), caulk_ISteamUser_GetSteamID());
+	printf("Logged in as %s (%lu)\n\n", caulk_SteamFriends_GetPersonaName(), caulk_SteamUser_GetSteamID());
 
-	int numFriends = caulk_ISteamFriends_GetFriendCount(k_EFriendFlagImmediate);
+	int numFriends = caulk_SteamFriends_GetFriendCount(k_EFriendFlagImmediate);
 	printf("You have %d friends%s\n", numFriends, numFriends ? ":" : ", ...huh");
 
 	for (int i = 0; i < numFriends; i++) {
-		CSteamID friend = caulk_ISteamFriends_GetFriendByIndex(i, k_EFriendFlagImmediate);
-		const char* friendName = caulk_ISteamFriends_GetFriendPersonaName(friend);
+		CSteamID friend = caulk_SteamFriends_GetFriendByIndex(i, k_EFriendFlagImmediate);
+		const char* friendName = caulk_SteamFriends_GetFriendPersonaName(friend);
 		printf("%d. %s (%lu)\n", i + 1, friendName, friend);
 	}
 
