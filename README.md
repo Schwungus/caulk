@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD033 MD045 -->
+
 # caulk
 
 <img align="right" height="128" src="assets/huge-caulk.png" alt="A splatter of caulk paste">
