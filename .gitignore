@@ -2,4 +2,6 @@
 /.cache
 /*.zip
 /?venv
+
 /__*
+/compile_commands.json
