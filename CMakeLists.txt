@@ -39,7 +39,7 @@ set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
 set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
 set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(caulkGenGlue ${CAULK_SRC_DIR}/caulk-gen.c)
+add_executable(caulkGenGlue ${CAULK_SRC_DIR}/generator.c)
 target_link_libraries(caulkGenGlue PRIVATE yyjson)
 
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
@@ -123,7 +123,7 @@ endfunction()
 
 option(CAULK_BUILD_TEST "Build the caulkTest executable?" ON)
 if(CAULK_BUILD_TEST)
-    add_executable(caulkTest ${CAULK_SRC_DIR}/caulk-test.c)
+    add_executable(caulkTest ${CAULK_SRC_DIR}/test.c)
     set_target_properties(caulkTest PROPERTIES LINKER_LANGUAGE C)
     target_link_libraries(caulkTest PRIVATE caulk)
     caulk_populate(caulkTest)
