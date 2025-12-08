@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "caulk.h"
+#include <caulk.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	printf("Logged in as %s (%lu)\n\n", caulk_SteamFriends_GetPersonaName(), caulk_SteamUser_GetSteamID());
+	printf("Logged in as %s (%llu)\n\n", caulk_SteamFriends_GetPersonaName(), caulk_SteamUser_GetSteamID());
 
 	int numFriends = caulk_SteamFriends_GetFriendCount(k_EFriendFlagImmediate);
 	printf("You have %d friends%s\n", numFriends, numFriends ? ":" : ", ...huh");
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < numFriends; i++) {
 		CSteamID friend = caulk_SteamFriends_GetFriendByIndex(i, k_EFriendFlagImmediate);
 		const char* friendName = caulk_SteamFriends_GetFriendPersonaName(friend);
-		printf("%d. %s (%lu)\n", i + 1, friendName, friend);
+		printf("%d. %s (%llu)\n", i + 1, friendName, friend);
 	}
 
 	fflush(stdout);

@@ -1,4 +1,4 @@
-#include "steam_api.h"
+#include <steam_api.h>
 
 #define CAULK_INTERNAL
 #include "caulk.h"
@@ -21,24 +21,24 @@ void caulk_Shutdown() {
 	SteamAPI_Shutdown();
 }
 
-struct ResultHandler {
+typedef struct {
 	caulk_ResultHandler fn;
 	SteamAPICall_t call;
 	bool registered : 1;
-};
+} ResultHandler;
 
-struct CallbackHandler {
+typedef struct {
 	caulk_CallbackHandler fn;
 	uint32_t callback;
 	bool registered : 1;
-};
+} CallbackHandler;
 
-static struct ResultHandler resultHandlers[2048] = {0};
-static struct CallbackHandler callbackHandlers[2048] = {0};
+static ResultHandler resultHandlers[2048] = {0};
+static CallbackHandler callbackHandlers[2048] = {0};
 
 void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-		struct ResultHandler* iter = &resultHandlers[idx];
+		ResultHandler* iter = &resultHandlers[idx];
 		if (!iter->registered) {
 			iter->fn = handler;
 			iter->call = call;
@@ -52,13 +52,13 @@ void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 
 void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(callbackHandlers); idx++) {
-		struct CallbackHandler* iter = &callbackHandlers[idx];
-		if (!iter->registered) {
-			iter->fn = handler;
-			iter->callback = callback;
-			iter->registered = true;
-			return;
-		}
+		CallbackHandler* iter = &callbackHandlers[idx];
+		if (iter->registered)
+			continue;
+		iter->fn = handler;
+		iter->callback = callback;
+		iter->registered = true;
+		return;
 	}
 
 	// shit we ran out o fslots againds a.........
@@ -66,7 +66,7 @@ void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
 
 static void dispatchResultHandler(SteamAPICall_t call, void* result, bool ioFailed) {
 	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-		struct ResultHandler* iter = &resultHandlers[idx];
+		ResultHandler* iter = &resultHandlers[idx];
 		if (iter->registered && iter->call == call) {
 			iter->registered = false;
 			iter->fn(result, ioFailed);
@@ -82,9 +82,8 @@ static void onCallCompleted(void* data) {
 	void* callResult = caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
 
 	bool bFailed;
-	if (SteamAPI_ManualDispatch_GetAPICallResult(
-		hSteamPipe, pCallback->m_hAsyncCall, callResult, pCallback->m_cubParam, pCallback->m_iCallback, &bFailed
-	    ))
+	if (SteamAPI_ManualDispatch_GetAPICallResult(hSteamPipe, pCallback->m_hAsyncCall, callResult,
+		    pCallback->m_cubParam, pCallback->m_iCallback, &bFailed))
 		dispatchResultHandler(pCallback->m_hAsyncCall, callResult, bFailed);
 
 	caulk_Free(callResult);
@@ -97,7 +96,7 @@ void caulk_Dispatch() {
 	CallbackMsg_t callback;
 	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, &callback)) {
 		for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-			struct CallbackHandler* iter = &callbackHandlers[idx];
+			CallbackHandler* iter = &callbackHandlers[idx];
 			if (iter->registered && iter->callback == callback.m_iCallback) {
 				iter->fn(callback.m_pubParam);
 				break;

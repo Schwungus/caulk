@@ -6,8 +6,6 @@ Checks: |
   -bugprone-easily-swappable-parameters,
   -bugprone-assignment-in-if-condition,
   -bugprone-reserved-identifier,
-  modernize-*,
-  -modernize-avoid-c-style,
   misc-*,
   -misc-unused-parameters,
   -misc-use-anonymous-namespace,

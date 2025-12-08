@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "yyjson.h"
+#include <yyjson.h>
 
 #define INDENT "\t"
 #define THIS "__THIS"
@@ -58,10 +58,8 @@ static const char* sanitizeType(const char* type) {
 
 static const char* prefixUserType(const char* type) {
 	static char buf[1024] = {0};
-	static const char* ignore[] = {
-	    "unsigned ", "int ", "intptr", "int16", "int32",  "int64",
-	    "char",	 "void", "bool",   "float", "double", "size_t",
-	};
+	static const char* ignore[] = {"unsigned ", "int ", "intptr", "int16", "int32", "int64", "char", "void", "bool",
+		"float", "double", "size_t"};
 
 	if (!strcmp(type, "int"))
 		goto noop;
@@ -199,11 +197,9 @@ static void writeParams(FILE* out, yyjson_val* params) {
 	}
 }
 
-static const char* ignoreForMethods[] = {
-    "SetDualSenseTriggerEffect", "ISteamNetworkingSockets",	"SteamDatagramHostedAddress",
-    "ISteamGameServer",		 "ISteamNetworkingFakeUDPPort", "ISteamHTML",
-    "SteamGameServer_v",	 "SteamGameServerStats_v",
-};
+static const char* ignoreForMethods[]
+	= {"SetDualSenseTriggerEffect", "ISteamNetworkingSockets", "SteamDatagramHostedAddress", "ISteamGameServer",
+		"ISteamNetworkingFakeUDPPort", "ISteamHTML", "SteamGameServer_v", "SteamGameServerStats_v"};
 
 enum {
 	methStruct,
@@ -382,16 +378,13 @@ static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
 	fprintf(cOutput, "}\n\n");
 }
 
-struct wrapper {
-	const char* arrayName;
+typedef struct {
+	const char *arrayName, *flatnameField;
 	void (*wrap)(yyjson_val*, yyjson_val*);
-	const char* flatnameField;
-};
+} Wrapper;
 
-static const char* nonApiInterfaces[] = {
-    "SteamMatchmakingServerListResponse", "SteamMatchmakingPingResponse", "SteamMatchmakingPlayersResponse",
-    "SteamMatchmakingRulesResponse"
-};
+static const char* nonApiInterfaces[] = {"SteamMatchmakingServerListResponse", "SteamMatchmakingPingResponse",
+	"SteamMatchmakingPlayersResponse", "SteamMatchmakingRulesResponse"};
 
 static void genMethods(yyjson_val* master, bool isInterface) {
 	const char* masterName = yyjson_get_str(yyjson_obj_get(master, "classname"));
@@ -401,13 +394,13 @@ static void genMethods(yyjson_val* master, bool isInterface) {
 			break;
 		}
 
-	const struct wrapper wrappers[] = {
-	    {"methods", isInterface ? wrapInterfaceMethod : wrapStructMethod, "methodname_flat"},
-	    {"accessors", wrapAccessor, "name_flat"},
+	const Wrapper wrappers[] = {
+		{"methods",   "methodname_flat", isInterface ? wrapInterfaceMethod : wrapStructMethod},
+		{"accessors", "name_flat",       wrapAccessor                                        },
 	};
 
 	for (size_t i = 0; i < LENGTH(wrappers); i++) {
-		const struct wrapper* wrapper = &wrappers[i];
+		const Wrapper* wrapper = &wrappers[i];
 
 		yyjson_val* methods = yyjson_obj_get(master, wrapper->arrayName);
 		if (!yyjson_get_len(methods))
