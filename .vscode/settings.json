@@ -16,6 +16,6 @@
         "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
     },
     "[cmake]": {
-        "editor.defaultFormatter": "cheshirekow.cmake-format"
+        "editor.formatOnSave": false
     }
 }

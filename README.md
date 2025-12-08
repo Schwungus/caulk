@@ -35,7 +35,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(caulk)
 
 add_executable(myProject main.c)
-caulk_register(myProject) # automatic copying of steam_appid.txt and shared library objects
+target_link_libraries(myProject PRIVATE caulk)
+caulk_populate(myProject) # automatic copying of steam_appid.txt and shared library objects
 ```
 
 You'll also need to include a [steam_appid.txt](steam_appid.txt) in your project's root; `caulk_register` copies that over as well.
