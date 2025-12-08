@@ -10,7 +10,7 @@ FetchContent_Declare(yyjson
     GIT_TAG 0.11.1)
 FetchContent_MakeAvailable(yyjson)
 
-set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_162.zip
+set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_163.zip
     CACHE STRING "Path to Steamworks SDK (zip)")
 if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
     message(FATAL_ERROR
