@@ -57,7 +57,8 @@ add_custom_command(
     OUTPUT ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT}
     COMMAND $<TARGET_FILE:caulkGenGlue>
     ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT} ${STEAM_API_JSON}
-    DEPENDS caulkGenGlue)
+    DEPENDS caulkGenGlue
+    VERBATIM)
 
 add_library(caulk ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
 add_dependencies(caulk caulkGenGlue)
@@ -109,13 +110,15 @@ function(caulk_populate TGT)
         add_custom_command(
             TARGET ${TGT} POST_BUILD
             COMMAND ${CMAKE_COMMAND}
-            -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>)
+            -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>
+            VERBATIM)
     endif()
 
     add_custom_command(
         TARGET ${TGT} POST_BUILD
         COMMAND ${CMAKE_COMMAND}
-        -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>)
+        -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>
+        VERBATIM)
 endfunction()
 
 option(CAULK_BUILD_TEST "Build the caulkTest executable?" ON)
