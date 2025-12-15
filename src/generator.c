@@ -18,7 +18,7 @@ static void fprintN(FILE* file, const char* str, size_t len) {
 		fputc(str[i], file);
 }
 
-static FILE *glueOutput = NULL, *cOutput = NULL;
+static FILE *glueOutput = NULL, *cppOutput = NULL;
 static yyjson_doc* gDoc;
 #define ROOT_OBJ (yyjson_doc_get_root(gDoc))
 
@@ -188,7 +188,7 @@ static void writeParams(FILE* out, yyjson_val* params) {
 
 		static char type[1024] = {0};
 		strcpy(type, sanitizeType(type0));
-		if (out == cOutput)
+		if (out == cppOutput)
 			strcpy(type, prefixUserType(type));
 
 		fprintf(out, "%s %s", type, name);
@@ -229,7 +229,7 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 	else
 		strcpy(retType, yyjson_get_str(yyjson_obj_get(method, "returntype")));
 
-	if (out == cOutput) {
+	if (out == cppOutput) {
 		strcpy(deezType, prefixUserType(deezType));
 		strcpy(retType, prefixUserType(retType));
 	}
@@ -253,14 +253,14 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 
 static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 	const char* masterName = structName(master);
-	const char* methodName = yyjson_get_str(yyjson_obj_get(method, "methodname"));
+	const char* methodNameFlat = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
 	const char* returnType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
 
 	writeMethodSignature(glueOutput, master, method, kind);
 	fprintf(glueOutput, ";\n");
 
-	writeMethodSignature(cOutput, master, method, kind);
-	fprintf(cOutput, " {\n");
+	writeMethodSignature(cppOutput, master, method, kind);
+	fprintf(cppOutput, " {\n");
 
 	yyjson_val* params = yyjson_obj_get(method, "params");
 	if (isConstructor(method))
@@ -277,28 +277,29 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 		static char pType[1024] = {0};
 		strcpy(pType, prefixUserType(sanitizeType(pType0)));
 
-		fprintf(cOutput, INDENT "%s* __%s = &%s;\n", pType, pName, pName);
+		fprintf(cppOutput, INDENT "%s* __%s = &%s;\n", pType, pName, pName);
 	}
 
 	yyjson_arr_iter_init(params, &iter);
 	size_t count = yyjson_get_len(params), idx = 0;
 	int retVoid = !strcmp(returnType, "void");
 
-	fprintf(cOutput, INDENT);
+	fprintf(cppOutput, INDENT);
 	if (!retVoid)
-		fprintf(cOutput, "%s " RESULT " = ", returnType);
+		fprintf(cppOutput, "%s " RESULT " = ", returnType);
 
-	if (isConstructor(method))
-		fprintf(cOutput, "%s(", returnType);
-	else if (kind == methInterface) {
+	if (isConstructor(method)) {
+		fprintf(cppOutput, "%s(", returnType);
+	} else if (kind == methInterface) {
 		static char ctor[512] = {0};
 		strcpy(ctor, masterName + 1);
-		fprintf(cOutput, "%s()->%s(", ctor, methodName);
-	} else
-		fprintf(cOutput, "reinterpret_cast<%s*>(" THIS ")->%s(", masterName, methodName);
+		fprintf(cppOutput, "%s(\n" INDENT INDENT "%s()", methodNameFlat, ctor);
+	} else {
+		fprintf(cppOutput, "%s(\n" INDENT INDENT "reinterpret_cast<%s*>(" THIS ")", methodNameFlat, masterName);
+	}
 
 	if (count)
-		fprintf(cOutput, "\n");
+		fprintf(cppOutput, ",\n");
 	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
@@ -306,24 +307,27 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 		static char pType[1024] = {0};
 		strcpy(pType, sanitizeType(pType0));
 
-		fprintf(cOutput, INDENT INDENT);
+		fprintf(cppOutput, INDENT INDENT);
 		for (size_t i = 0; i < strlen(pType0); i++)
 			if (pType0[i] == '&')
-				fprintf(cOutput, "*");
-		fprintf(cOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
-
+				fprintf(cppOutput, "*");
+			// HACK: `CSteamID` & `CGameID` are used as integers instead of the usual classes in
+			// `steam_api_flat.h`. So here we use them as-is instead of type-casting.
+			else if (!strcmp(pType, "CSteamID") || !strcmp(pType, "CGameID")) {
+				fprintf(cppOutput, "%s", pName);
+				goto skip_reinterpret;
+			}
+		fprintf(cppOutput, "*reinterpret_cast<%s*>(__%s)", pType, pName);
+	skip_reinterpret:
 		if (++idx < count)
-			fprintf(cOutput, ", ");
-		fprintf(cOutput, "\n");
+			fprintf(cppOutput, ",\n");
 	}
-	if (count)
-		fprintf(cOutput, INDENT);
-	fprintf(cOutput, ");\n");
+	fprintf(cppOutput, "\n" INDENT ");\n");
 
 	if (!retVoid)
-		fprintf(cOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(returnType));
+		fprintf(cppOutput, INDENT "return *reinterpret_cast<%s*>(&" RESULT ");\n", prefixUserType(returnType));
 
-	fprintf(cOutput, "}\n\n");
+	fprintf(cppOutput, "}\n\n");
 }
 
 static void wrapStructMethod(yyjson_val* master, yyjson_val* method) {
@@ -353,7 +357,7 @@ static void writeAccessorSignature(FILE* out, yyjson_val* tMaster, yyjson_val* a
 	static char deezType[1024] = {0}, deezPtr[1024] = {0};
 
 	strcpy(deezType, structName(tMaster));
-	if (out == cOutput)
+	if (out == cppOutput)
 		strcpy(deezType, prefixUserType(deezType));
 
 	strcpy(deezPtr, deezType);
@@ -371,11 +375,11 @@ static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
 	writeAccessorSignature(glueOutput, tMaster, acc);
 	fprintf(glueOutput, ";\n");
 
-	writeAccessorSignature(cOutput, tMaster, acc);
-	fprintf(cOutput, " {\n");
-	fprintf(cOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
-	fprintf(cOutput, INDENT "return *reinterpret_cast<%s**>(&" RESULT ");\n", prefixUserType(mastName));
-	fprintf(cOutput, "}\n\n");
+	writeAccessorSignature(cppOutput, tMaster, acc);
+	fprintf(cppOutput, " {\n");
+	fprintf(cppOutput, INDENT "%s* " RESULT " = %s();\n", mastName, accName);
+	fprintf(cppOutput, INDENT "return *reinterpret_cast<%s**>(&" RESULT ");\n", prefixUserType(mastName));
+	fprintf(cppOutput, "}\n\n");
 }
 
 typedef struct {
@@ -513,8 +517,8 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 
 	glueOutput = fopen(argv[1], "wt");
-	cOutput = fopen(argv[3], "wt");
-	if (glueOutput == NULL || cOutput == NULL)
+	cppOutput = fopen(argv[3], "wt");
+	if (glueOutput == NULL || cppOutput == NULL)
 		return EXIT_FAILURE;
 
 	yyjson_read_flag flg = YYJSON_READ_ALLOW_COMMENTS | YYJSON_READ_ALLOW_TRAILING_COMMAS;
@@ -530,19 +534,19 @@ int main(int argc, char* argv[]) {
 	fprintf(glueOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n");
 	fprintf(glueOutput, "#endif\n\n");
 
-	fprintf(cOutput, "#include \"steam_api.h\"\n\n");
+	fprintf(cppOutput, "#include \"steam_api_flat.h\"\n\n");
 
-	fprintf(cOutput, "namespace caulk { extern \"C\" { \n");
-	fprintf(cOutput, INDENT "#include \"__gen.h\"\n");
-	fprintf(cOutput, "} }\n\n");
+	fprintf(cppOutput, "namespace caulk { extern \"C\" { \n");
+	fprintf(cppOutput, INDENT "#include \"__gen.h\"\n");
+	fprintf(cppOutput, "} }\n\n");
 
-	fprintf(cOutput, "extern \"C\" {\n\n");
+	fprintf(cppOutput, "extern \"C\" {\n\n");
 
 	genConsts();
 	genTypedefs();
 	genStructs();
 
-	fprintf(cOutput, "}\n");
+	fprintf(cppOutput, "}\n");
 	fclose(glueOutput);
 
 	FILE* hOutput = fopen(argv[2], "wt");
@@ -605,7 +609,7 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "#endif\n\n");
 
 	yyjson_doc_free(gDoc);
-	fclose(cOutput);
+	fclose(cppOutput);
 	fclose(hOutput);
 
 	return EXIT_SUCCESS;
