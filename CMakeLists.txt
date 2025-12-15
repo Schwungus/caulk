@@ -14,7 +14,8 @@ set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_163.zip
     CACHE STRING "Path to Steamworks SDK (zip)")
 if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
     message(FATAL_ERROR
-        "You forgot to specify a path to Steamworks SDK .zip! Check the README")
+        "You forgot to specify a path to Steamworks SDK .zip! "
+        "Or maybe it couldn't be found. Check the README either way")
 endif()
 
 set(STEAM_APPID ${CMAKE_SOURCE_DIR}/steam_appid.txt
