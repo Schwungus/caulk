@@ -23,7 +23,7 @@ static yyjson_doc* gDoc;
 #define ROOT_OBJ (yyjson_doc_get_root(gDoc))
 
 static const char* fieldName(const char* field, const char* master) {
-	if (master == NULL)
+	if (!master)
 		return field;
 
 	static char buf[1024] = {0};
@@ -67,31 +67,25 @@ static const char* prefixUserType(const char* type) {
 		if (strstr(type, ignore[i]))
 			goto noop;
 
-	char* dest = buf;
-	if (strstr(type, "const ") != NULL) {
-		strcpy(buf, "const ");
-		dest = buf + strlen("const ");
-		type += strlen("const ");
-	}
-	strcpy(dest, NS_PREFIX);
-	dest += strlen(NS_PREFIX);
-	strcpy(dest, type);
-
+	if (strstr(type, "const "))
+		snprintf(buf, sizeof(buf), "const " NS_PREFIX "%s", type + strlen("const "));
+	else
+		snprintf(buf, sizeof(buf), NS_PREFIX "%s", type);
 	return buf;
 
 noop:
-	strcpy(buf, type);
+	snprintf(buf, sizeof(buf), "%s", type);
 	return buf;
 }
 
 static const char* structName(yyjson_val* type) {
 	const char* master = yyjson_get_str(yyjson_obj_get(type, "struct"));
-	if (master == NULL)
+	if (!master)
 		master = yyjson_get_str(yyjson_obj_get(type, "classname"));
 	return master;
 }
 
-static int isConstructor(yyjson_val* method) {
+static bool isConstructor(yyjson_val* method) {
 	return strstr(yyjson_get_str(yyjson_obj_get(method, "methodname_flat")), "Construct") != NULL;
 }
 
@@ -111,7 +105,7 @@ static void defineEnum(yyjson_val* enm, const char* master) {
 
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(values, &iter);
-	while ((val = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((val = yyjson_arr_iter_next(&iter))) {
 		name = yyjson_get_str(yyjson_obj_get(val, "name"));
 		const char* value = yyjson_get_str(yyjson_obj_get(val, "value"));
 		fprintf(glueOutput, INDENT "%s = %s,\n", name, value);
@@ -128,7 +122,7 @@ static void genEnums(yyjson_val* enums, const char* master) {
 		fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n");
 
 	yyjson_val* enm = NULL;
-	while ((enm = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((enm = yyjson_arr_iter_next(&iter))) {
 		declareEnum(enm, master);
 		defineEnum(enm, master);
 	}
@@ -139,10 +133,10 @@ static void genEnums(yyjson_val* enums, const char* master) {
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
 	char* offset = NULL;
-	if ((offset = strstr(type, "(*)")) != NULL) {
+	if ((offset = strstr(type, "(*)"))) {
 		fprintN(out, type, offset + 2 - type);
 		fprintf(out, "%s%s%s", private ? "__" : "", name, offset + 2);
-	} else if ((offset = strstr(type, "[")) != NULL) {
+	} else if ((offset = strstr(type, "["))) {
 		fprintN(out, type, offset - 1 - type);
 		fprintf(out, " %s%s%s", private ? "__" : "", name, offset);
 	} else {
@@ -163,7 +157,7 @@ static void genFields(yyjson_val* struc) {
 	fprintf(glueOutput, "struct %s {\n", structName(struc));
 
 	yyjson_val* field = NULL;
-	while ((field = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((field = yyjson_arr_iter_next(&iter))) {
 		const char* name = yyjson_get_str(yyjson_obj_get(field, "fieldname"));
 		const char* type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
 		bool private = yyjson_get_bool(yyjson_obj_get(field, "private"));
@@ -182,14 +176,14 @@ static void writeParams(FILE* out, yyjson_val* params) {
 	yyjson_arr_iter_init(params, &iter);
 
 	yyjson_val* arg = NULL;
-	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((arg = yyjson_arr_iter_next(&iter))) {
 		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char type[1024] = {0};
-		strcpy(type, sanitizeType(type0));
+		snprintf(type, sizeof(type), "%s", sanitizeType(type0));
 		if (out == cppOutput)
-			strcpy(type, prefixUserType(type));
+			snprintf(type, sizeof(type), "%s", prefixUserType(type));
 
 		fprintf(out, "%s %s", type, name);
 		if (yyjson_arr_iter_has_next(&iter))
@@ -207,15 +201,14 @@ enum {
 };
 
 static const char* normalizeMethodName(yyjson_val* method) {
-	const char* metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
-	const char* metStem = metName + strlen("SteamAPI_");
+	const char *metName = yyjson_get_str(yyjson_obj_get(method, "methodname_flat")),
+		   *metStem = metName + strlen("SteamAPI_");
+
 	if (!strncmp(metStem, "ISteam", strlen("ISteam")))
 		metStem++;
 
 	static char buf[1024] = {0};
-	strcpy(buf, METHOD_PREFIX);
-	strcat(buf, metStem);
-
+	snprintf(buf, sizeof(buf), METHOD_PREFIX "%s", metStem);
 	return buf;
 }
 
@@ -223,21 +216,17 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 	const char* metName = normalizeMethodName(method);
 	static char deezType[1024] = {0}, deezPtr[1024] = {0}, retType[1024] = {0};
 
-	strcpy(deezType, structName(tMaster));
+	snprintf(deezType, sizeof(deezType), "%s", structName(tMaster));
 	if (isConstructor(method))
-		strcpy(retType, deezType);
+		snprintf(retType, sizeof(retType), "%s", structName(tMaster));
 	else
-		strcpy(retType, yyjson_get_str(yyjson_obj_get(method, "returntype")));
+		snprintf(retType, sizeof(retType), "%s", yyjson_get_str(yyjson_obj_get(method, "returntype")));
 
 	if (out == cppOutput) {
-		strcpy(deezType, prefixUserType(deezType));
-		strcpy(retType, prefixUserType(retType));
+		snprintf(deezType, sizeof(deezType), "%s", prefixUserType(deezType));
+		snprintf(retType, sizeof(retType), "%s", prefixUserType(retType));
 	}
-
-	strcpy(deezPtr, deezType);
-	size_t i = strlen(deezPtr);
-	deezPtr[i++] = '*';
-	deezPtr[i++] = '\0';
+	snprintf(deezPtr, sizeof(deezPtr), "%s*", deezType);
 
 	fprintf(out, "%s %s(", retType, metName);
 	if (kind == methStruct)
@@ -270,12 +259,12 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(params, &iter);
 
-	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((arg = yyjson_arr_iter_next(&iter))) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char pType[1024] = {0};
-		strcpy(pType, prefixUserType(sanitizeType(pType0)));
+		snprintf(pType, sizeof(pType), "%s", prefixUserType(sanitizeType(pType0)));
 
 		fprintf(cppOutput, INDENT "%s* __%s = &%s;\n", pType, pName, pName);
 	}
@@ -292,7 +281,7 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 		fprintf(cppOutput, "%s(", returnType);
 	} else if (kind == methInterface) {
 		static char ctor[512] = {0};
-		strcpy(ctor, masterName + 1);
+		snprintf(ctor, sizeof(ctor), "%s", masterName + 1);
 		fprintf(cppOutput, "%s(\n" INDENT INDENT "%s()", methodNameFlat, ctor);
 	} else {
 		fprintf(cppOutput, "%s(\n" INDENT INDENT "reinterpret_cast<%s*>(" THIS ")", methodNameFlat, masterName);
@@ -300,12 +289,12 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 
 	if (count)
 		fprintf(cppOutput, ",\n");
-	while ((arg = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((arg = yyjson_arr_iter_next(&iter))) {
 		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
 		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char pType[1024] = {0};
-		strcpy(pType, sanitizeType(pType0));
+		snprintf(pType, sizeof(pType), "%s", sanitizeType(pType0));
 
 		fprintf(cppOutput, INDENT INDENT);
 		for (size_t i = 0; i < strlen(pType0); i++)
@@ -342,30 +331,22 @@ static const char* normalizeAccessorName(yyjson_val* accessor) {
 	const char* accName = yyjson_get_str(yyjson_obj_get(accessor, "name_flat"));
 
 	static char buf[1024] = {0};
-	strcpy(buf, METHOD_PREFIX);
-	strcpy(buf + strlen(METHOD_PREFIX), accName + strlen("SteamAPI_"));
+	snprintf(buf, sizeof(buf), METHOD_PREFIX "%s", accName + strlen("SteamAPI_"));
 
 	char* suffix = strstr(buf, "_v0");
-	if (suffix != NULL)
+	if (suffix)
 		*suffix = '\0';
 
 	return buf;
 }
 
 static void writeAccessorSignature(FILE* out, yyjson_val* tMaster, yyjson_val* accessor) {
-	const char* accName = normalizeAccessorName(accessor);
-	static char deezType[1024] = {0}, deezPtr[1024] = {0};
-
-	strcpy(deezType, structName(tMaster));
+	static char deezType[1024] = {0};
 	if (out == cppOutput)
-		strcpy(deezType, prefixUserType(deezType));
-
-	strcpy(deezPtr, deezType);
-	size_t i = strlen(deezPtr);
-	deezPtr[i++] = '*';
-	deezPtr[i++] = '\0';
-
-	fprintf(out, "%s* %s()", deezType, accName);
+		snprintf(deezType, sizeof(deezType), "%s", prefixUserType(structName(tMaster)));
+	else
+		snprintf(deezType, sizeof(deezType), "%s", structName(tMaster));
+	fprintf(out, "%s* %s()", deezType, normalizeAccessorName(accessor));
 }
 
 static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
@@ -392,7 +373,7 @@ static const char* nonApiInterfaces[] = {"SteamMatchmakingServerListResponse", "
 
 static void genMethods(yyjson_val* master, bool isInterface) {
 	const char* masterName = yyjson_get_str(yyjson_obj_get(master, "classname"));
-	for (size_t i = 0; masterName != NULL && i < LENGTH(nonApiInterfaces); i++)
+	for (size_t i = 0; masterName && i < LENGTH(nonApiInterfaces); i++)
 		if (strstr(masterName, nonApiInterfaces[i])) {
 			isInterface = false;
 			break;
@@ -415,10 +396,10 @@ static void genMethods(yyjson_val* master, bool isInterface) {
 		yyjson_arr_iter_init(yyjson_obj_get(master, wrapper->arrayName), &iter);
 
 		yyjson_val* method = NULL;
-		while ((method = yyjson_arr_iter_next(&iter)) != NULL) {
+		while ((method = yyjson_arr_iter_next(&iter))) {
 			const char* name = yyjson_get_str(yyjson_obj_get(method, wrapper->flatnameField));
 			for (size_t i = 0; i < LENGTH(ignoreForMethods); i++)
-				if (strstr(name, ignoreForMethods[i]) != NULL)
+				if (strstr(name, ignoreForMethods[i]))
 					goto next;
 			wrapper->wrap(master, method);
 		next:
@@ -433,7 +414,7 @@ static void genConsts() {
 	yyjson_val* cnst = NULL;
 	yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, "consts"), &iter);
 
-	while ((cnst = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((cnst = yyjson_arr_iter_next(&iter))) {
 		const char* name = yyjson_get_str(yyjson_obj_get(cnst, "constname"));
 		const char* type = yyjson_get_str(yyjson_obj_get(cnst, "consttype"));
 		const char* value = yyjson_get_str(yyjson_obj_get(cnst, "constval"));
@@ -456,7 +437,7 @@ static void genTypedefs() {
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
 		yyjson_val* struc = NULL;
-		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
+		while ((struc = yyjson_arr_iter_next(&iter))) {
 			const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 			if (i == SPECIAL) {
 				parent = yyjson_get_str(yyjson_obj_get(struc, "classname"));
@@ -478,7 +459,7 @@ static void genTypedefs() {
 	yyjson_arr_iter_init(typeDefs, &iter);
 
 	yyjson_val* typeDef = NULL;
-	while ((typeDef = yyjson_arr_iter_next(&iter)) != NULL) {
+	while ((typeDef = yyjson_arr_iter_next(&iter))) {
 		const char* name = yyjson_get_str(yyjson_obj_get(typeDef, "typedef"));
 		const char* type = yyjson_get_str(yyjson_obj_get(typeDef, "type"));
 		fprintf(glueOutput, "typedef ");
@@ -503,7 +484,7 @@ static void genStructs() {
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
 		yyjson_val* struc = NULL;
-		while ((struc = yyjson_arr_iter_next(&iter)) != NULL) {
+		while ((struc = yyjson_arr_iter_next(&iter))) {
 			genFields(struc);
 			genMethods(struc, i == SPECIAL);
 			genCallbackId(struc);
@@ -518,13 +499,12 @@ int main(int argc, char* argv[]) {
 
 	glueOutput = fopen(argv[1], "wt");
 	cppOutput = fopen(argv[3], "wt");
-	if (glueOutput == NULL || cppOutput == NULL)
+	if (!glueOutput || !cppOutput)
 		return EXIT_FAILURE;
 
 	yyjson_read_flag flg = YYJSON_READ_ALLOW_COMMENTS | YYJSON_READ_ALLOW_TRAILING_COMMAS;
 	yyjson_read_err err;
-	gDoc = yyjson_read_file(argv[4], flg, NULL, &err);
-	if (gDoc == NULL)
+	if (!(gDoc = yyjson_read_file(argv[4], flg, NULL, &err)))
 		return EXIT_FAILURE;
 
 	fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n");
@@ -587,7 +567,7 @@ int main(int argc, char* argv[]) {
 	size_t count = 0;
 	FILE* glueInput = fopen(argv[1], "rt");
 
-	if (glueInput == NULL)
+	if (!glueInput)
 		return EXIT_FAILURE;
 	while (!feof(glueInput)) {
 		count = fread(buf, 1, sizeof(buf), glueInput);
