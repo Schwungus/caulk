@@ -183,8 +183,8 @@ static void genFields(yyjson_val* struc) {
 
 	yyjson_val* field = NULL;
 	while ((field = yyjson_arr_iter_next(&iter))) {
-		const char* name = yyjson_get_str(yyjson_obj_get(field, "fieldname"));
-		const char* type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
+		const char *name = yyjson_get_str(yyjson_obj_get(field, "fieldname")),
+			   *type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
 		bool private = yyjson_get_bool(yyjson_obj_get(field, "private"));
 
 		fprintf(glueOutput, INDENT);
@@ -202,8 +202,8 @@ static void writeParams(FILE* out, yyjson_val* params) {
 
 	yyjson_val* arg = NULL;
 	while ((arg = yyjson_arr_iter_next(&iter))) {
-		const char* name = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
-		const char* type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		const char *name = yyjson_get_str(yyjson_obj_get(arg, "paramname")),
+			   *type0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char type[1024] = {0};
 		snprintf(type, sizeof(type), "%s", sanitizeType(type0));
@@ -266,9 +266,9 @@ static void writeMethodSignature(FILE* out, yyjson_val* tMaster, yyjson_val* met
 }
 
 static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
-	const char* masterName = structName(master);
-	const char* methodNameFlat = yyjson_get_str(yyjson_obj_get(method, "methodname_flat"));
-	const char* returnType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
+	const char *masterName = structName(master),
+		   *methodNameFlat = yyjson_get_str(yyjson_obj_get(method, "methodname_flat")),
+		   *returnType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
 
 	writeMethodSignature(glueOutput, master, method, kind);
 	fprintf(glueOutput, ";\n");
@@ -285,8 +285,8 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 	yyjson_arr_iter_init(params, &iter);
 
 	while ((arg = yyjson_arr_iter_next(&iter))) {
-		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
-		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		const char *pName = yyjson_get_str(yyjson_obj_get(arg, "paramname")),
+			   *pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char pType[1024] = {0};
 		snprintf(pType, sizeof(pType), "%s", prefixUserType(sanitizeType(pType0)));
@@ -315,8 +315,8 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 	if (count)
 		fprintf(cppOutput, ",\n");
 	while ((arg = yyjson_arr_iter_next(&iter))) {
-		const char* pName = yyjson_get_str(yyjson_obj_get(arg, "paramname"));
-		const char* pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
+		const char *pName = yyjson_get_str(yyjson_obj_get(arg, "paramname")),
+			   *pType0 = yyjson_get_str(yyjson_obj_get(arg, "paramtype"));
 
 		static char pType[1024] = {0};
 		snprintf(pType, sizeof(pType), "%s", sanitizeType(pType0));
@@ -375,9 +375,7 @@ static void writeAccessorSignature(FILE* out, yyjson_val* tMaster, yyjson_val* a
 }
 
 static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
-	const char* mastName = structName(tMaster);
-	const char* accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
-
+	const char *mastName = structName(tMaster), *accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
 	writeAccessorSignature(glueOutput, tMaster, acc);
 	fprintf(glueOutput, ";\n");
 
@@ -440,9 +438,9 @@ static void genConsts() {
 	yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, "consts"), &iter);
 
 	while ((cnst = yyjson_arr_iter_next(&iter))) {
-		const char* name = yyjson_get_str(yyjson_obj_get(cnst, "constname"));
-		const char* type = yyjson_get_str(yyjson_obj_get(cnst, "consttype"));
-		const char* value = yyjson_get_str(yyjson_obj_get(cnst, "constval"));
+		const char *name = yyjson_get_str(yyjson_obj_get(cnst, "constname")),
+			   *type = yyjson_get_str(yyjson_obj_get(cnst, "consttype")),
+			   *value = yyjson_get_str(yyjson_obj_get(cnst, "constval"));
 		fprintf(glueOutput, "#define %s ((%s)(%s))\n", name, type, value);
 	}
 
@@ -485,8 +483,8 @@ static void genTypedefs() {
 
 	yyjson_val* typeDef = NULL;
 	while ((typeDef = yyjson_arr_iter_next(&iter))) {
-		const char* name = yyjson_get_str(yyjson_obj_get(typeDef, "typedef"));
-		const char* type = yyjson_get_str(yyjson_obj_get(typeDef, "type"));
+		const char *name = yyjson_get_str(yyjson_obj_get(typeDef, "typedef")),
+			   *type = yyjson_get_str(yyjson_obj_get(typeDef, "type"));
 		fprintf(glueOutput, "typedef ");
 		writeDecl(glueOutput, name, type, false);
 		fprintf(glueOutput, ";\n");
@@ -522,8 +520,7 @@ int main(int argc, char* argv[]) {
 	if (argc != 5)
 		return EXIT_FAILURE;
 
-	glueOutput = fopen(argv[1], "wt");
-	cppOutput = fopen(argv[3], "wt");
+	glueOutput = fopen(argv[1], "wt"), cppOutput = fopen(argv[3], "wt");
 	if (!glueOutput || !cppOutput)
 		return EXIT_FAILURE;
 
@@ -555,6 +552,9 @@ int main(int argc, char* argv[]) {
 	fclose(glueOutput);
 
 	FILE* hOutput = fopen(argv[2], "wt");
+	if (!hOutput)
+		return EXIT_FAILURE;
+
 	fprintf(hOutput, "#pragma once\n\n");
 
 	fprintf(hOutput, "#include <stddef.h>\n");

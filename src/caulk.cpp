@@ -49,27 +49,27 @@ void caulk_Shutdown() {
 typedef struct {
 	caulk_ResultHandler fn;
 	SteamAPICall_t call;
-	bool registered : 1;
+	bool registered;
 } ResultHandler;
 
 typedef struct {
 	caulk_CallbackHandler fn;
 	uint32_t callback;
-	bool registered : 1;
+	bool registered;
 } CallbackHandler;
 
-static ResultHandler resultHandlers[2048] = {0};
-static CallbackHandler callbackHandlers[2048] = {0};
+#define COUNT (2048)
+static ResultHandler resultHandlers[COUNT] = {0};
+static CallbackHandler callbackHandlers[COUNT] = {0};
+#undef COUNT
 
 void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
 		ResultHandler* iter = &resultHandlers[idx];
-		if (!iter->registered) {
-			iter->fn = handler;
-			iter->call = call;
-			iter->registered = true;
-			return;
-		}
+		if (iter->registered)
+			continue;
+		iter->fn = handler, iter->call = call, iter->registered = true;
+		return;
 	}
 
 	// shit we ran out o fslots.........
@@ -80,9 +80,7 @@ void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
 		CallbackHandler* iter = &callbackHandlers[idx];
 		if (iter->registered)
 			continue;
-		iter->fn = handler;
-		iter->callback = callback;
-		iter->registered = true;
+		iter->fn = handler, iter->callback = callback, iter->registered = true;
 		return;
 	}
 
@@ -93,8 +91,7 @@ static void dispatchResultHandler(SteamAPICall_t call, void* result, bool ioFail
 	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
 		ResultHandler* iter = &resultHandlers[idx];
 		if (iter->registered && iter->call == call) {
-			iter->registered = false;
-			iter->fn(result, ioFailed);
+			iter->registered = false, iter->fn(result, ioFailed);
 			return;
 		}
 	}

@@ -40,8 +40,8 @@ set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
 set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
 set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(caulkGenGlue ${CAULK_SRC_DIR}/generator.c)
-target_link_libraries(caulkGenGlue PRIVATE yyjson)
+add_executable(caulkGlueGenerator ${CAULK_SRC_DIR}/generator.c)
+target_link_libraries(caulkGlueGenerator PRIVATE yyjson)
 
 set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
 file(MAKE_DIRECTORY ${GEN_OUT_DIR})
@@ -56,13 +56,13 @@ set(STEAM_API_JSON ${SDK_INCLUDE_DIR}/steam/steam_api.json)
 
 add_custom_command(
     OUTPUT ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT}
-    COMMAND $<TARGET_FILE:caulkGenGlue>
+    COMMAND $<TARGET_FILE:caulkGlueGenerator>
     ${GEN_GLUE_OUT} ${GEN_H_OUT} ${GEN_C_OUT} ${STEAM_API_JSON}
-    DEPENDS caulkGenGlue
+    DEPENDS caulkGlueGenerator
     VERBATIM)
 
 add_library(caulk ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
-add_dependencies(caulk caulkGenGlue)
+add_dependencies(caulk caulkGlueGenerator)
 set_target_properties(caulk PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(caulk PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(caulk
