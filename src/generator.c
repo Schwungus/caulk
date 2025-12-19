@@ -43,7 +43,7 @@ static void fprintN(FILE* file, const char* str, size_t len) {
 		fputc(str[i], file);
 }
 
-static FILE *glueOutput = NULL, *cppOutput = NULL;
+static FILE *hOutput = NULL, *cppOutput = NULL;
 static yyjson_doc* gDoc;
 #define ROOT_OBJ (yyjson_doc_get_root(gDoc))
 
@@ -116,14 +116,14 @@ static bool isConstructor(yyjson_val* method) {
 
 static void declareEnum(yyjson_val* enm, const char* master) {
 	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
-	fprintf(glueOutput, "#ifndef __cplusplus\n");
-	fprintf(glueOutput, "typedef enum32_t %s;\n", name);
-	fprintf(glueOutput, "#endif\n");
+	fprintf(hOutput, "#ifndef __cplusplus\n");
+	fprintf(hOutput, "typedef enum32_t %s;\n", name);
+	fprintf(hOutput, "#endif\n");
 }
 
 static void defineEnum(yyjson_val* enm, const char* master) {
 	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
-	fprintf(glueOutput, "enum %s {\n", name);
+	fprintf(hOutput, "enum %s {\n", name);
 
 	yyjson_val* val = NULL;
 	yyjson_val* values = yyjson_obj_get(enm, "values");
@@ -133,10 +133,10 @@ static void defineEnum(yyjson_val* enm, const char* master) {
 	while ((val = yyjson_arr_iter_next(&iter))) {
 		name = yyjson_get_str(yyjson_obj_get(val, "name"));
 		const char* value = yyjson_get_str(yyjson_obj_get(val, "value"));
-		fprintf(glueOutput, INDENT "%s = %s,\n", name, value);
+		fprintf(hOutput, INDENT "%s = %s,\n", name, value);
 	}
 
-	fprintf(glueOutput, "};\n\n");
+	fprintf(hOutput, "};\n\n");
 }
 
 static void genEnums(yyjson_val* enums, const char* master) {
@@ -144,7 +144,7 @@ static void genEnums(yyjson_val* enums, const char* master) {
 	yyjson_arr_iter_init(enums, &iter);
 
 	if (yyjson_get_len(enums))
-		fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n");
+		fprintf(hOutput, "#ifndef CAULK_INTERNAL\n");
 
 	yyjson_val* enm = NULL;
 	while ((enm = yyjson_arr_iter_next(&iter))) {
@@ -153,7 +153,7 @@ static void genEnums(yyjson_val* enums, const char* master) {
 	}
 
 	if (yyjson_get_len(enums))
-		fprintf(glueOutput, "#endif\n");
+		fprintf(hOutput, "#endif\n");
 }
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
@@ -178,8 +178,8 @@ static void genFields(yyjson_val* struc) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(fields, &iter);
 
-	fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n");
-	fprintf(glueOutput, "struct %s {\n", structName(struc));
+	fprintf(hOutput, "#ifndef CAULK_INTERNAL\n");
+	fprintf(hOutput, "struct %s {\n", structName(struc));
 
 	yyjson_val* field = NULL;
 	while ((field = yyjson_arr_iter_next(&iter))) {
@@ -187,13 +187,13 @@ static void genFields(yyjson_val* struc) {
 			   *type = yyjson_get_str(yyjson_obj_get(field, "fieldtype"));
 		bool private = yyjson_get_bool(yyjson_obj_get(field, "private"));
 
-		fprintf(glueOutput, INDENT);
-		writeDecl(glueOutput, name, sanitizeType(type), private);
-		fprintf(glueOutput, ";\n");
+		fprintf(hOutput, INDENT);
+		writeDecl(hOutput, name, sanitizeType(type), private);
+		fprintf(hOutput, ";\n");
 	}
 
-	fprintf(glueOutput, "};\n");
-	fprintf(glueOutput, "#endif\n");
+	fprintf(hOutput, "};\n");
+	fprintf(hOutput, "#endif\n");
 }
 
 static void writeParams(FILE* out, yyjson_val* params) {
@@ -270,8 +270,8 @@ static void wrapMethod(yyjson_val* master, yyjson_val* method, int kind) {
 		   *methodNameFlat = yyjson_get_str(yyjson_obj_get(method, "methodname_flat")),
 		   *returnType = yyjson_get_str(yyjson_obj_get(method, "returntype"));
 
-	writeMethodSignature(glueOutput, master, method, kind);
-	fprintf(glueOutput, ";\n");
+	writeMethodSignature(hOutput, master, method, kind);
+	fprintf(hOutput, ";\n");
 
 	writeMethodSignature(cppOutput, master, method, kind);
 	fprintf(cppOutput, " {\n");
@@ -376,8 +376,8 @@ static void writeAccessorSignature(FILE* out, yyjson_val* tMaster, yyjson_val* a
 
 static void wrapAccessor(yyjson_val* tMaster, yyjson_val* acc) {
 	const char *mastName = structName(tMaster), *accName = yyjson_get_str(yyjson_obj_get(acc, "name"));
-	writeAccessorSignature(glueOutput, tMaster, acc);
-	fprintf(glueOutput, ";\n");
+	writeAccessorSignature(hOutput, tMaster, acc);
+	fprintf(hOutput, ";\n");
 
 	writeAccessorSignature(cppOutput, tMaster, acc);
 	fprintf(cppOutput, " {\n");
@@ -413,7 +413,7 @@ static void genMethods(yyjson_val* master, bool isInterface) {
 		yyjson_val* methods = yyjson_obj_get(master, wrapper->arrayName);
 		if (!yyjson_get_len(methods))
 			continue;
-		fprintf(glueOutput, "\n");
+		fprintf(hOutput, "\n");
 
 		yyjson_arr_iter iter;
 		yyjson_arr_iter_init(yyjson_obj_get(master, wrapper->arrayName), &iter);
@@ -441,10 +441,10 @@ static void genConsts() {
 		const char *name = yyjson_get_str(yyjson_obj_get(cnst, "constname")),
 			   *type = yyjson_get_str(yyjson_obj_get(cnst, "consttype")),
 			   *value = yyjson_get_str(yyjson_obj_get(cnst, "constval"));
-		fprintf(glueOutput, "#define %s ((%s)(%s))\n", name, type, value);
+		fprintf(hOutput, "#define %s ((%s)(%s))\n", name, type, value);
 	}
 
-	fprintf(glueOutput, "\n");
+	fprintf(hOutput, "\n");
 }
 
 static void genTypedefs() {
@@ -454,7 +454,7 @@ static void genTypedefs() {
 	static const char* sources[] = {"structs", "callback_structs", [SPECIAL] = "interfaces"};
 	yyjson_arr_iter iter;
 
-	fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n\n");
+	fprintf(hOutput, "#ifndef CAULK_INTERNAL\n\n");
 
 	for (size_t i = 0; i < LENGTH(sources); i++) {
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
@@ -464,17 +464,17 @@ static void genTypedefs() {
 			const char* parent = yyjson_get_str(yyjson_obj_get(struc, "struct"));
 			if (i == SPECIAL) {
 				parent = yyjson_get_str(yyjson_obj_get(struc, "classname"));
-				fprintf(glueOutput, "typedef void* %s;\n", parent);
+				fprintf(hOutput, "typedef void* %s;\n", parent);
 			} else {
-				fprintf(glueOutput, "struct %s;\n", parent);
-				fprintf(glueOutput, "#ifndef __cplusplus\n");
-				fprintf(glueOutput, "typedef struct %s %s;\n", parent, parent);
-				fprintf(glueOutput, "#endif\n");
+				fprintf(hOutput, "struct %s;\n", parent);
+				fprintf(hOutput, "#ifndef __cplusplus\n");
+				fprintf(hOutput, "typedef struct %s %s;\n", parent, parent);
+				fprintf(hOutput, "#endif\n");
 			}
 			genEnums(yyjson_obj_get(struc, "enums"), parent);
 		}
 
-		fprintf(glueOutput, "\n");
+		fprintf(hOutput, "\n");
 	}
 #undef SPECIAL
 
@@ -485,18 +485,18 @@ static void genTypedefs() {
 	while ((typeDef = yyjson_arr_iter_next(&iter))) {
 		const char *name = yyjson_get_str(yyjson_obj_get(typeDef, "typedef")),
 			   *type = yyjson_get_str(yyjson_obj_get(typeDef, "type"));
-		fprintf(glueOutput, "typedef ");
-		writeDecl(glueOutput, name, type, false);
-		fprintf(glueOutput, ";\n");
+		fprintf(hOutput, "typedef ");
+		writeDecl(hOutput, name, type, false);
+		fprintf(hOutput, ";\n");
 	}
 
-	fprintf(glueOutput, "\n#endif\n\n");
+	fprintf(hOutput, "\n#endif\n\n");
 }
 
 static void genCallbackId(yyjson_val* struc) {
 	int id = yyjson_get_int(yyjson_obj_get(struc, "callback_id"));
 	if (id)
-		fprintf(glueOutput, "#define %s_iCallback %d\n", structName(struc), id);
+		fprintf(hOutput, "#define %s_iCallback %d\n", structName(struc), id);
 }
 
 static void genStructs() {
@@ -517,42 +517,16 @@ static void genStructs() {
 }
 
 int main(int argc, char* argv[]) {
-	if (argc != 5)
+	if (argc != 4)
 		return EXIT_FAILURE;
 
-	glueOutput = fopen(argv[1], "wt"), cppOutput = fopen(argv[3], "wt");
-	if (!glueOutput || !cppOutput)
+	hOutput = fopen(argv[1], "wt"), cppOutput = fopen(argv[2], "wt");
+	if (!hOutput || !cppOutput)
 		return EXIT_FAILURE;
 
 	yyjson_read_flag flg = YYJSON_READ_ALLOW_COMMENTS | YYJSON_READ_ALLOW_TRAILING_COMMAS;
 	yyjson_read_err err;
-	if (!(gDoc = yyjson_read_file(argv[4], flg, NULL, &err)))
-		return EXIT_FAILURE;
-
-	fprintf(glueOutput, "#ifndef CAULK_INTERNAL\n");
-	fprintf(glueOutput, "typedef uint32_t enum32_t;\n");
-	fprintf(glueOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n");
-	fprintf(glueOutput, "typedef uint64_t CSteamID, CGameID;\n");
-	fprintf(glueOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n");
-	fprintf(glueOutput, "#endif\n\n");
-
-	fprintf(cppOutput, "#include \"steam_api_flat.h\"\n\n");
-
-	fprintf(cppOutput, "namespace caulk { extern \"C\" { \n");
-	fprintf(cppOutput, INDENT "#include \"__gen.h\"\n");
-	fprintf(cppOutput, "} }\n\n");
-
-	fprintf(cppOutput, "extern \"C\" {\n\n");
-
-	genConsts();
-	genTypedefs();
-	genStructs();
-
-	fprintf(cppOutput, "}\n");
-	fclose(glueOutput);
-
-	FILE* hOutput = fopen(argv[2], "wt");
-	if (!hOutput)
+	if (!(gDoc = yyjson_read_file(argv[3], flg, NULL, &err)))
 		return EXIT_FAILURE;
 
 	fprintf(hOutput, "#pragma once\n\n");
@@ -588,17 +562,19 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "extern \"C\" {\n");
 	fprintf(hOutput, "#endif\n\n");
 
-	char buf[4096] = {0};
-	size_t count = 0;
-	FILE* glueInput = fopen(argv[1], "rt");
+	fprintf(cppOutput, "#include \"steam_api_flat.h\"\n\n");
 
-	if (!glueInput)
-		return EXIT_FAILURE;
-	while (!feof(glueInput)) {
-		count = fread(buf, 1, sizeof(buf), glueInput);
-		fwrite(buf, 1, count, hOutput);
-	}
-	fclose(glueInput);
+	fprintf(cppOutput, "namespace caulk { extern \"C\" { \n");
+	fprintf(cppOutput, INDENT "#include \"__gen.h\"\n");
+	fprintf(cppOutput, "} }\n\n");
+
+	fprintf(cppOutput, "extern \"C\" {\n\n");
+
+	genConsts();
+	genTypedefs();
+	genStructs();
+
+	fprintf(cppOutput, "}\n");
 
 	fprintf(hOutput, "typedef void (*caulk_ResultHandler)(void*, bool);\n");
 	fprintf(hOutput, "typedef void (*caulk_CallbackHandler)(void*);\n\n");
