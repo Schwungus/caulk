@@ -4,15 +4,22 @@
 
 <img align="right" height="128" src="assets/huge-caulk.png" alt="A splatter of caulk paste">
 
-caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C. Capische?
+caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C instead of C++ as intended. Capische?
 
-Refer to the [usage section](#basic-usage) and the [code example](src/caulk-test.c) for a quick rundown.
+Refer to [the usage section](#basic-usage) and [the code example](src/test.c) for a quick rundown.
 
 :heavy_check_mark: [Schwungus](https://github.com/Schwungus)-certified.
 
 ## Rationale
 
-The Steamworks SDK provides the header `steam_api_flat.h` which declares interoperable interface functions. However, it isn't pure C, leading to build errors (duh). This library mitigates that by generating a plain-C compatibility layer to C++ types, functions, and methods defined in the SDK, with the help of `steam_api.json`.
+The Steamworks SDK provides the header `steam_api_flat.h` which declares interoperable interface functions. However, it is written in C++, which leads to grotesque build errors if you include it in your plain-C code. This library mitigates that by generating a compatibility layer, gluing C++ classes, structures, functions, and methods defined in the SDK to plain-C code, with the help of `steam_api.json`, which is a repository of all classes and methods used in Steamworks designed for this specific purpose (thanks Valve!).
+
+Gluing the C++ SDK to C objects nonetheless requires using a C++ linker to produce the final binary. This means **you will have to use a C++ toolchain** to build your game.
+
+The key takeaways from going on through with this all are twofold:
+
+1. You get to use Steamworks inside a plain-C game. Doesn't matter whether it's being used for personal amusement or due to technical limitations.
+2. Other programming languages that can interface with C native libraries won't have to reinvent a whole new wrapper generator to bind the C++ Steamworks SDK to their C glue module. caulk reduces the friction of porting Steamworks to other programming languages by a whole step.
 
 ## Basic usage
 
@@ -41,7 +48,7 @@ caulk_populate(myProject) # automatic copying of steam_appid.txt and shared libr
 
 You'll also need to include a [steam_appid.txt](steam_appid.txt) in your project's root; `caulk_register` copies that over as well.
 
-To use the Steam API from your C code, add `#include "caulk.h"` and prefix each SteamAPI function with `caulk_`:
+To use the Steam API from your C code, add `#include "caulk.h"` and prefix each SteamAPI function call with `caulk_`:
 
 ```c
 #include <stdlib.h>
@@ -58,15 +65,15 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-Again, see [test.c](src/caulk-test.c) for a more complete example.
+Again, see [`test.c`](src/test.c) for a more complete example.
+
+The API is designed to be self-documenting. Once you look up a Steamworks object you need to use, calling methods on it is simple: just pass a pointer to your object to a function named `caulk_ClassName_MethodName()`. "Interface" types from the Steamworks SDK are even easier to use: you don't need to make an object for them; just call `caulk_InterfaceName_MethodName()`!
 
 ## Callbacks and call results
 
-The Steamworks API relies a lot on callbacks and call results. Here's how to use them.
+If a method returns `SteamAPICall_t` instead of giving the desired result immediately, it must be an asynchronous call which will spit out a value _eventually_. To use this value, you will have to define a handler function using `caulk_Resolve()`; that function will be called by `caulk_Dispatch()` whenever your result is ready.
 
-If a method returns `SteamAPICall_t` instead of giving you the desired result, it must be an asynchronous call which will spit out a value _eventually_. To use said value, you'll have to define a handler function using `caulk_Resolve()`, which is called by `caulk_Dispatch()` whenever your result is ready.
-
-Also, you'll be receiving a lot of events from Steamworks. To make any use of them, you'll have to register handlers using `caulk_Register()`.
+Also, you'll be receiving a lot of events from Steamworks. To make use of them, you'll have to register handlers using `caulk_Register()`. These also rely on calls to `caulk_Dispatch()` to trigger.
 
 See the example below for both `caulk_Resolve()` and `caulk_Register()`:
 
