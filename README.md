@@ -46,19 +46,19 @@ target_link_libraries(myProject PRIVATE caulk)
 caulk_populate(myProject) # automatic copying of steam_appid.txt and shared library objects
 ```
 
-You'll also need to include a [steam_appid.txt](steam_appid.txt) in your project's root; `caulk_register` copies that over as well.
+You will also need to include a [`steam_appid.txt`](steam_appid.txt) in your project's root. You should use the `caulk_populate(targetName)` CMake convenience function: it copies `steam_appid.txt` and `steamapi.dll` over to the passed target's binary output directory.
 
-To use the Steam API from your C code, add `#include "caulk.h"` and prefix each SteamAPI function call with `caulk_`:
+To actually use the Steamworks SDK from your C code, add `#include <caulk.h>` and prefix each Steamworks function call with `caulk_`:
 
 ```c
 #include <stdlib.h>
-#include "caulk.h"
+#include <caulk.h>
 
 int main(int argc, char* argv[]) {
     if (!caulk_Init())
         return EXIT_FAILURE;
 
-    /* Do SteamAPI stuff here... */
+    /* Do Steamworks stuff here... */
 
     caulk_Shutdown();
     return EXIT_SUCCESS;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
 Again, see [`test.c`](src/test.c) for a more complete example.
 
-The API is designed to be self-documenting. Once you look up a Steamworks object you need to use, calling methods on it is simple: just pass a pointer to your object to a function named `caulk_ClassName_MethodName()`. "Interface" types from the Steamworks SDK are even easier to use: you don't need to make an object for them; just call `caulk_InterfaceName_MethodName()`!
+The API is designed to be self-documenting. Once you look up a Steamworks object you need to use, calling methods on it is simple: just pass a pointer to your object to a function named `caulk_ClassName_MethodName()`. "Interface" types from the Steamworks SDK are even easier to use: you don't need to make an object for them; just call `caulk_InterfaceName_MethodName()`! (The `I` prefix is absent from `InterfaceName` in this call signature: e.g. `ISteamMatchmaking` becomes just `SteamMatchmaking`.)
 
 ## Callbacks and call results
 
