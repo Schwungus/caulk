@@ -79,7 +79,7 @@ See the example below for both `caulk_Resolve()` and `caulk_Register()`:
 
 ```c
 #include <stdlib.h>
-#include "caulk.h"
+#include <caulk.h>
 
 static void resolveCreateLobby(void* pData, bool ioFail) {
     LobbyCreated_t* data = pData;
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     caulk_Register(LobbyEnter_t_iCallback, onEnterLobby);
 
     // Let a lobby be created in the background, and run `resolveCreateLobby()` when it's done.
-    SteamAPICall_t cb = caulk_ISteamMatchmaking_CreateLobby(mm, k_ELobbyTypeFriendsOnly, 2);
+    SteamAPICall_t cb = caulk_SteamMatchmaking_CreateLobby(k_ELobbyTypeFriendsOnly, 2);
     caulk_Resolve(cb, resolveCreateLobby);
 
     for (;;)
