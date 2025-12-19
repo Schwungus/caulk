@@ -431,7 +431,7 @@ static void genMethods(yyjson_val* master, bool isInterface) {
 	}
 }
 
-static void genConsts() {
+static void genConstants() {
 	yyjson_arr_iter iter;
 
 	yyjson_val* cnst = NULL;
@@ -507,11 +507,8 @@ static void genStructs() {
 		yyjson_arr_iter_init(yyjson_obj_get(ROOT_OBJ, sources[i]), &iter);
 
 		yyjson_val* struc = NULL;
-		while ((struc = yyjson_arr_iter_next(&iter))) {
-			genFields(struc);
-			genMethods(struc, i == SPECIAL);
-			genCallbackId(struc);
-		}
+		while ((struc = yyjson_arr_iter_next(&iter)))
+			genFields(struc), genMethods(struc, i == SPECIAL), genCallbackId(struc);
 	}
 #undef SPECIAL
 }
@@ -569,11 +566,7 @@ int main(int argc, char* argv[]) {
 	fprintf(cppOutput, "} }\n\n");
 
 	fprintf(cppOutput, "extern \"C\" {\n\n");
-
-	genConsts();
-	genTypedefs();
-	genStructs();
-
+	genConstants(), genTypedefs(), genStructs();
 	fprintf(cppOutput, "}\n");
 
 	fprintf(hOutput, "typedef void (*caulk_ResultHandler)(void*, bool);\n");
@@ -590,8 +583,7 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "#endif\n\n");
 
 	yyjson_doc_free(gDoc);
-	fclose(cppOutput);
-	fclose(hOutput);
+	fclose(cppOutput), fclose(hOutput);
 
 	return EXIT_SUCCESS;
 }
