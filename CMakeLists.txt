@@ -49,14 +49,16 @@ file(MAKE_DIRECTORY ${GEN_OUT_DIR})
 set(GEN_OUT_DIR_PUB ${CMAKE_BINARY_DIR}/steamworksgen-pub)
 file(MAKE_DIRECTORY ${GEN_OUT_DIR_PUB})
 
+set(GEN_API_OUT ${GEN_OUT_DIR}/__api.h)
 set(GEN_H_OUT ${GEN_OUT_DIR_PUB}/caulk.h)
 set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
+
 set(STEAM_API_JSON ${SDK_INCLUDE_DIR}/steam/steam_api.json)
 
 add_custom_command(
     OUTPUT ${GEN_H_OUT} ${GEN_C_OUT}
     COMMAND $<TARGET_FILE:caulkGlueGenerator>
-    ${GEN_H_OUT} ${GEN_C_OUT} ${STEAM_API_JSON}
+    ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
     DEPENDS caulkGlueGenerator
     VERBATIM)
 

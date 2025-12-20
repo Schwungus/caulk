@@ -101,14 +101,14 @@ static void onCallCompleted(void* data) {
 	HSteamPipe hSteamPipe = SteamAPI_GetHSteamPipe();
 
 	SteamAPICallCompleted_t* pCallback = reinterpret_cast<SteamAPICallCompleted_t*>(data);
-	void* callResult = caulk_Malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
+	void* callResult = malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
 
 	bool bFailed;
 	if (SteamAPI_ManualDispatch_GetAPICallResult(hSteamPipe, pCallback->m_hAsyncCall, callResult,
 		    pCallback->m_cubParam, pCallback->m_iCallback, &bFailed))
 		dispatchResultHandler(pCallback->m_hAsyncCall, callResult, bFailed);
 
-	caulk_Free(callResult);
+	free(callResult);
 }
 
 void caulk_Dispatch() {
