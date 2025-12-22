@@ -92,6 +92,7 @@ static const char* sanitizeType(const char* type) {
 	return buf;
 }
 
+// heuristic af. it doesn't actually parse the type; instead, it runs quick string matches that work most of the time.
 static const char* prefixUserType(const char* type) {
 	static char buf[1024] = {0};
 	static const char* ignore[] = {"unsigned ", "int ", "intptr", "int16", "int32", "int64", "char", "void", "bool",
