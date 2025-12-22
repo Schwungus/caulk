@@ -69,8 +69,7 @@ static const char* fieldName(const char* field, const char* master) {
 	for (; i < strlen(master); i++)
 		buf[i] = master[i];
 
-	buf[i++] = '_';
-	buf[i++] = '_';
+	buf[i++] = '_', buf[i++] = '_';
 
 	for (size_t j = 0; j < strlen(field); j++, i++)
 		buf[i] = field[j];
