@@ -21,6 +21,10 @@ The key takeaways from going on through with this all are twofold:
 1. You get to use Steamworks inside a plain-C game. Doesn't matter whether it's being used for personal amusement or due to technical limitations.
 2. Other programming languages that can interface with C native libraries won't have to reinvent a whole new wrapper generator to bind the C++ Steamworks SDK to their C glue module. caulk reduces the friction of porting Steamworks to other programming languages by a whole step.
 
+## Cross-Compilation Warning
+
+Please note that the compatibility-layer generator compiles to a **native binary** and **has to be run** in order for this library to even compile. This means you cannot (currently) compile the library from scratch e.g. on Linux targeting Windows, since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
+
 ## Basic usage
 
 caulk requires a [ZIP of the Steamworks SDK](https://partner.steamgames.com/downloads/steamworks_sdk_163.zip) in your project's root. Click that link to semi-legally download it.
