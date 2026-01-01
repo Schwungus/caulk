@@ -25,7 +25,7 @@ if(NOT EXISTS ${STEAM_APPID})
         "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
 endif()
 
-set(SDK_SOURCE_DIR ${CMAKE_BINARY_DIR}/steamworks)
+set(SDK_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/steamworks)
 file(ARCHIVE_EXTRACT INPUT ${STEAMWORKS_SDK_ZIP} DESTINATION ${SDK_SOURCE_DIR})
 
 set(CMAKE_C_STANDARD 11)
@@ -43,10 +43,8 @@ set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(caulkGlueGenerator ${CAULK_SRC_DIR}/generator.c)
 target_link_libraries(caulkGlueGenerator PRIVATE yyjson)
 
-set(GEN_OUT_DIR ${CMAKE_BINARY_DIR}/steamworksgen)
-file(MAKE_DIRECTORY ${GEN_OUT_DIR})
-
-set(GEN_OUT_DIR_PUB ${CMAKE_BINARY_DIR}/steamworksgen-pub)
+set(GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(GEN_OUT_DIR_PUB ${CMAKE_CURRENT_BINARY_DIR}/pub)
 file(MAKE_DIRECTORY ${GEN_OUT_DIR_PUB})
 
 set(GEN_API_OUT ${GEN_OUT_DIR}/__api.h)
