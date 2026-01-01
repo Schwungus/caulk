@@ -42,8 +42,10 @@ set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
 set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
 set(CAULK_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(caulkGlueGenerator ${CAULK_SRC_DIR}/generator.c)
-target_link_libraries(caulkGlueGenerator PRIVATE yyjson)
+if(NOT CAULK_PREBUILT_GENERATOR)
+    add_executable(caulkGlueGenerator ${CAULK_SRC_DIR}/generator.c)
+    target_link_libraries(caulkGlueGenerator PRIVATE yyjson)
+endif()
 
 set(GEN_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(GEN_OUT_DIR_PUB ${CMAKE_CURRENT_BINARY_DIR}/pub)
