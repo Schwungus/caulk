@@ -119,7 +119,7 @@ As a workaround, you'll have to use one of [the releases](https://github.com/Sch
 
 ```cmake
 FetchContent_Declare(caulk
-    URL https://github.com/toggins/caulk/releases/download/stable/caulk-rolling.zip)
+    URL https://github.com/Schwungus/caulk/releases/download/rolling/caulk-rolling.zip)
 ```
 
 Then modify your `CMakeLists.txt` to use the precompiled generator by adding the following after `FetchContent_MakeAvailable(caulk)`:
