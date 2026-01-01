@@ -25,7 +25,10 @@ jobs:
           version: latest
       - name: Configure
         shell: bash
-        run: cmake -G Ninja -S . -B build -DCAULK_SYBAU=1 -DCMAKE_TOOLCHAIN_FILE=.github/cosmopolitan.cmake
+        run: |
+          cmake -G Ninja -S . -B build \
+            -D CAULK_GENERATOR_ONLY=ON -D CAULK_BUILD_TEST=OFF \
+            -D CMAKE_TOOLCHAIN_FILE=.github/cosmopolitan.cmake
       - name: Build
         run: cmake --build build --target caulkGlueGenerator
       - name: Package
