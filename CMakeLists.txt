@@ -12,7 +12,7 @@ FetchContent_MakeAvailable(yyjson)
 
 set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_163.zip
     CACHE STRING "Path to Steamworks SDK (zip)")
-if(NOT EXISTS ${STEAMWORKS_SDK_ZIP})
+if(NOT EXISTS ${STEAMWORKS_SDK_ZIP} AND NOT CAULK_SYBAU)
     message(FATAL_ERROR
         "You forgot to specify a path to Steamworks SDK .zip! "
         "Or maybe it couldn't be found. Check the README either way")
@@ -20,7 +20,7 @@ endif()
 
 set(STEAM_APPID ${CMAKE_SOURCE_DIR}/steam_appid.txt
     CACHE STRING "Path to steam_appid.txt")
-if(NOT EXISTS ${STEAM_APPID})
+if(NOT EXISTS ${STEAM_APPID} AND NOT CAULK_SYBAU)
     message(FATAL_ERROR
         "You forgot to add a steam_appid.txt! Just write \"480\" inside it.")
 endif()
