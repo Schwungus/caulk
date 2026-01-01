@@ -34,7 +34,8 @@ jobs:
       - name: Package
         run: |
           rm -rf caulk; mkdir -p caulk
-          cp -r -t caulk src assets .github UNLICENSE README.md CMakeLists.txt
+          cp -r -t caulk assets .github UNLICENSE README.md CMakeLists.txt
+          mkdir -p src; cp -t src src/caulk.cpp
           cp build/caulkGlueGenerator caulk/ape
           cd caulk; zip ../build/$OUTNAME.zip -r .
       - name: Release

@@ -59,7 +59,6 @@ add_custom_command(
     OUTPUT ${GEN_H_OUT} ${GEN_C_OUT}
     COMMAND $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,${CAULK_PREBUILT_GENERATOR},$<TARGET_FILE:caulkGlueGenerator>>
     ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
-    DEPENDS caulkGlueGenerator
     VERBATIM)
 
 add_library(caulk ${GEN_H_OUT} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
@@ -123,7 +122,7 @@ function(caulk_populate TGT)
 endfunction()
 
 option(CAULK_BUILD_TEST "Build the caulkTest executable?" ON)
-if(CAULK_BUILD_TEST)
+if(CAULK_BUILD_TEST AND NOT CAULK_GENERATOR_ONLY)
     add_executable(caulkTest ${CAULK_SRC_DIR}/test.c)
     set_target_properties(caulkTest PROPERTIES LINKER_LANGUAGE C)
     target_link_libraries(caulkTest PRIVATE caulk)
