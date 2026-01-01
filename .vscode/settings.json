@@ -1,5 +1,5 @@
 {
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": false,
     "editor.formatOnSaveMode": "file",
     "C_Cpp.intelliSenseEngine": "disabled",
     "clangd.enable": true,
@@ -10,12 +10,11 @@
         ".cache": true
     },
     "[c]": {
+        "editor.formatOnSave": true,
         "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
     },
     "[cpp]": {
+        "editor.formatOnSave": true,
         "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    },
-    "[cmake]": {
-        "editor.formatOnSave": false
     }
 }
