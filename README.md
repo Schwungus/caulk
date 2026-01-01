@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-## Cross-Compilation Warning
+## Cross-Compilation
 
 Please note that the compatibility-layer generator compiles to a **native binary** and **has to be run** in order for this library to even compile. This means you cannot (currently) compile the library from scratch e.g. on Linux targeting Windows, since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
 
