@@ -1,4 +1,4 @@
-name: Release pregenerated headers/glue
+name: Release generator binary
 
 on:
   push:
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   release:
-    name: Release
+    name: Release generator binary
     runs-on: ubuntu-24.04
     permissions:
       contents: write
