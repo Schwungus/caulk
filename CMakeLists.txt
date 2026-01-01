@@ -62,8 +62,7 @@ add_custom_command(
     DEPENDS caulkGlueGenerator
     VERBATIM)
 
-add_library(caulk ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
-add_dependencies(caulk caulkGlueGenerator)
+add_library(caulk ${GEN_H_OUT} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
 set_target_properties(caulk PROPERTIES LINKER_LANGUAGE C)
 target_compile_definitions(caulk PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 target_include_directories(caulk
