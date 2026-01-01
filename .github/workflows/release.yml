@@ -1,0 +1,41 @@
+name: Release pregenerated headers/glue
+
+on:
+  push:
+    branches: [master]
+    tags:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      OUTNAME: caulk-${{ github.ref_name == 'master' && 'rolling' || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - uses: bjia56/setup-cosmocc@v0.0.5
+        with:
+          version: latest
+      - name: Configure
+        shell: bash
+        run: cmake -G Ninja -S . -B build -DCMAKE_TOOLCHAIN_FILE=.github/cosmopolitan.cmake
+      - name: Build
+        run: cmake --build build --target caulkGlueGenerator
+      - name: Package
+        run: |
+          rm -rf caulk; mkdir -p caulk
+          cp -r -t caulk src assets .github UNLICENSE README.md CMakeLists.txt
+          cp build/caulkGlueGenerator caulk/ape
+          zip build/$OUTNAME.zip caulk
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name == 'master' && 'rolling' || github.ref_name }}
+          files: build/${{ env.OUTNAME }}.zip

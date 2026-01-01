@@ -21,10 +21,6 @@ The key takeaways from going on through with this all are twofold:
 1. You get to use Steamworks inside a plain-C game. Doesn't matter whether it's being used for personal amusement or due to technical limitations.
 2. Other programming languages that can interface with C native libraries won't have to reinvent a whole new wrapper generator to bind the C++ Steamworks SDK to their C glue module. caulk reduces the friction of porting Steamworks to other programming languages by a whole step.
 
-## Cross-Compilation Warning
-
-Please note that the compatibility-layer generator compiles to a **native binary** and **has to be run** in order for this library to even compile. This means you cannot (currently) compile the library from scratch e.g. on Linux targeting Windows, since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
-
 ## Basic usage
 
 caulk requires a [ZIP of the Steamworks SDK](https://partner.steamgames.com/downloads/steamworks_sdk_163.zip) in your project's root. Click that link to semi-legally download it.
@@ -39,9 +35,8 @@ project(myProject)
 set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_163.zip)
 
 include(FetchContent)
-FetchContent_Declare(
-    caulk
-    GIT_REPOSITORY "https://github.com/Schwungus/caulk.git"
+FetchContent_Declare(caulk
+    GIT_REPOSITORY https://github.com/Schwungus/caulk.git
     GIT_TAG <release tag or commit SHA>) # edit this line to your liking
 FetchContent_MakeAvailable(caulk)
 
@@ -114,4 +109,21 @@ int main(int argc, char* argv[]) {
     caulk_Shutdown();
     return EXIT_SUCCESS;
 }
+```
+
+## Cross-Compilation Warning
+
+Please note that the compatibility-layer generator compiles to a **native binary** and **has to be run** in order for this library to even compile. This means you cannot (currently) compile the library from scratch e.g. on Linux targeting Windows, since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
+
+As a workaround, you'll have to use one of [the releases](https://github.com/Schwungus/caulk/releases) where the glue-code generator is compiled to an [APE binary](https://github.com/jart/cosmopolitan). Change your `FetchContent_Declare` block to something along the lines of:
+
+```cmake
+FetchContent_Declare(caulk
+    URL https://github.com/toggins/caulk/releases/download/stable/caulk-rolling.zip)
+```
+
+Then modify your `CMakeLists.txt` to use the precompiled generator by adding the following after `FetchContent_MakeAvailable(caulk)`:
+
+```cmake
+set(CAULK_PREBUILT_GENERATOR ${caulk_SOURCE_DIR}/ape)
 ```
