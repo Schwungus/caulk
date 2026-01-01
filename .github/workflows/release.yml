@@ -36,7 +36,7 @@ jobs:
           rm -rf caulk; mkdir -p caulk
           cp -r -t caulk src assets .github UNLICENSE README.md CMakeLists.txt
           cp build/caulkGlueGenerator caulk/ape
-          cd caulk; zip build/$OUTNAME.zip -r .
+          cd caulk; zip ../build/$OUTNAME.zip -r .
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
