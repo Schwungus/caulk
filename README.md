@@ -119,7 +119,7 @@ As a workaround, you'll have to use one of [the releases](https://github.com/Sch
 
 ```cmake
 FetchContent_Declare(caulk
-    URL https://github.com/Schwungus/caulk/releases/download/rolling/caulk-rolling.zip)
+    URL https://github.com/Schwungus/caulk/releases/download/rolling/caulk-rolling.tar.gz)
 set(CAULK_PREBUILT_GENERATOR ${caulk_SOURCE_DIR}/ape)
 FetchContent_MakeAvailable(caulk)
 ```
