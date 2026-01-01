@@ -42,7 +42,8 @@ FetchContent_MakeAvailable(caulk)
 
 add_executable(myProject main.c)
 target_link_libraries(myProject PRIVATE caulk)
-caulk_populate(myProject) # automatic copying of steam_appid.txt and shared library objects
+# call this to automatically copy steam_appid.txt and shared library objects after build:
+caulk_populate(myProject)
 ```
 
 You will also need to include a [`steam_appid.txt`](steam_appid.txt) in your project's root. You should use the `caulk_populate(targetName)` CMake convenience function: it copies `steam_appid.txt` and `steamapi.dll` over to the passed target's binary output directory.
@@ -113,9 +114,9 @@ int main(int argc, char* argv[]) {
 
 ## Cross-Compilation
 
-Please note that the compatibility-layer generator compiles to a **native binary** and **has to be run** in order for this library to even compile. This means you cannot (currently) compile the library from scratch e.g. on Linux targeting Windows, since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
+Please note that the compatibility-layer generator compiles to a **native binary** that **has to be run** in order for caulk to even compile. This means you cannot (currently) cross-compile the library from scratch (e.g. from Linux targeting Windows), since the resulting generator binary will be a Windows executable that cannot run natively on the builder Linux.
 
-As a workaround, you'll have to use one of [the releases](https://github.com/Schwungus/caulk/releases) where the glue-code generator is compiled to an [APE binary](https://github.com/jart/cosmopolitan). Change your `FetchContent_Declare` block to something along the lines of:
+As a workaround, you'll have to use one of [the releases](https://github.com/Schwungus/caulk/releases), where the glue-code generator is compiled to a cross-platform [APE binary](https://github.com/jart/cosmopolitan). Instruct caulk to use the prebuilt generator binary by changing your `FetchContent_Declare` block to something along the lines of:
 
 ```cmake
 FetchContent_Declare(caulk
