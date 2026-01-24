@@ -536,23 +536,28 @@ int main(int argc, char* argv[]) {
 
 	fprintf(hOutput, "#pragma once\n\n");
 
-	fprintf(hOutput, "#ifdef __cplusplus\n");
-	fprintf(hOutput, "extern \"C\" {\n");
-	fprintf(hOutput, "#endif\n\n");
-
-	fprintf(hOutput, "#include <inttypes.h>\n");
 	fprintf(hOutput, "#include <stddef.h>\n");
 	fprintf(hOutput, "#include <stdint.h>\n");
 	fprintf(hOutput, "#include <stdbool.h>\n");
-	fprintf(hOutput, "#include <stdlib.h>\n\n");
+	fprintf(hOutput, "#include <stdlib.h>\n");
 
-	fprintf(hOutput, "#define PRI_SteamID PRIu64\n");
-	fprintf(hOutput, "#define PRI_CSteamID PRI_SteamID\n\n");
+	fprintf(apiOutput, "#include <inttypes.h>\n\n");
+
+	fprintf(apiOutput, "#define PRI_SteamID PRIu64\n");
+	fprintf(apiOutput, "#define PRI_CSteamID PRI_SteamID\n\n");
+
+	fprintf(apiOutput, "#ifdef __cplusplus\n");
+	fprintf(apiOutput, "extern \"C\" {\n");
+	fprintf(apiOutput, "#endif\n\n");
 
 	fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n");
 	fprintf(apiOutput, "typedef int32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
 	fprintf(apiOutput, "typedef uint64_t CSteamID, CGameID;\n");
 	fprintf(apiOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n");
+	fprintf(apiOutput, "#endif\n\n");
+
+	fprintf(apiOutput, "#ifdef __cplusplus\n");
+	fprintf(apiOutput, "}\n");
 	fprintf(apiOutput, "#endif\n\n");
 
 	fprintf(cppOutput, "#include <steam_api_flat.h>\n\n");
@@ -570,6 +575,10 @@ int main(int argc, char* argv[]) {
 		static char buf[1024] = {0};
 		fwrite(buf, 1, fread(buf, 1, sizeof(buf), apiOutput), hOutput);
 	}
+
+	fprintf(hOutput, "#ifdef __cplusplus\n");
+	fprintf(hOutput, "extern \"C\" {\n");
+	fprintf(hOutput, "#endif\n\n");
 
 	fprintf(hOutput, "typedef void (*caulk_ResultHandler)(void*, bool);\n");
 	fprintf(hOutput, "typedef void (*caulk_CallbackHandler)(void*);\n\n");
