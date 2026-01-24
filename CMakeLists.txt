@@ -61,6 +61,7 @@ set(STEAM_API_JSON ${SDK_INCLUDE_DIR}/steam/steam_api.json)
 
 add_custom_command(
     OUTPUT ${GEN_H_OUT} ${GEN_C_OUT}
+    DEPENDS $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,,caulkGlueGenerator>
     COMMAND $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,${CAULK_PREBUILT_GENERATOR},$<TARGET_FILE:caulkGlueGenerator>>
             ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
     VERBATIM)
