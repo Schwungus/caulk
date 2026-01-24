@@ -2,7 +2,7 @@
 
 # caulk
 
-<img align="right" height="128" src="assets/huge-caulk.png" alt="A splatter of caulk paste">
+<img align="right" height="128" src="assets/huge-caulk.png" alt="A splattering of caulk">
 
 caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C instead of C++ as intended. Capische?
 
@@ -28,7 +28,7 @@ caulk requires a [ZIP of the Steamworks SDK](https://partner.steamgames.com/down
 caulk uses CMake for the build pipeline. Since CMake is the de-facto standard for cross-platform C/C++ compilation, you shouldn't be afraid to use it - here's a `CMakeLists.txt` example:
 
 ```cmake
-cmake_minimum_required(VERSION 3.24.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28.0 FATAL_ERROR)
 project(myProject)
 
 # REQUIRED: point this to your Steamworks SDK archive.
