@@ -549,10 +549,14 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "extern \"C\" {\n");
 	fprintf(hOutput, "#endif\n\n");
 
+	fprintf(hOutput, "#include <inttypes.h>\n");
 	fprintf(hOutput, "#include <stddef.h>\n");
 	fprintf(hOutput, "#include <stdint.h>\n");
-	fprintf(hOutput, "#include <stdbool.h>\n\n");
+	fprintf(hOutput, "#include <stdbool.h>\n");
 	fprintf(hOutput, "#include <stdlib.h>\n\n");
+
+	fprintf(hOutput, "#define PRI_SteamID PRIu64\n");
+	fprintf(hOutput, "#define PRI_CSteamID PRI_SteamID\n\n");
 
 	fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n");
 	fprintf(apiOutput, "typedef uint32_t enum32_t;\n");

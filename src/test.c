@@ -46,7 +46,8 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	printf("Logged in as %s (%llu)\n\n", caulk_SteamFriends_GetPersonaName(), caulk_SteamUser_GetSteamID());
+	printf("Logged in as %s (%" PRI_SteamID ")\n\n", caulk_SteamFriends_GetPersonaName(),
+		caulk_SteamUser_GetSteamID());
 
 	int num_friends = caulk_SteamFriends_GetFriendCount(k_EFriendFlagImmediate);
 	printf("You have %d friends%s\n", num_friends, num_friends ? ":" : ", ...huh");
@@ -54,7 +55,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < num_friends; i++) {
 		CSteamID friend = caulk_SteamFriends_GetFriendByIndex(i, k_EFriendFlagImmediate);
 		const char* friend_name = caulk_SteamFriends_GetFriendPersonaName(friend);
-		printf("%d. %s (%llu)\n", i + 1, friend_name, friend);
+		printf("%d. %s (%" PRI_SteamID ")\n", i + 1, friend_name, friend);
 	}
 
 	fflush(stdout);
