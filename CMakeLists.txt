@@ -4,11 +4,13 @@ project(caulk VERSION 0.1.0
     DESCRIPTION "THE Steamworks API wrapper for use with plain C"
     LANGUAGES C CXX)
 
-include(FetchContent)
-FetchContent_Declare(yyjson
-    GIT_REPOSITORY https://github.com/ibireme/yyjson.git
-    GIT_TAG 0.11.1)
-FetchContent_MakeAvailable(yyjson)
+if(NOT CAULK_PREBUILT_GENERATOR)
+    include(FetchContent)
+    FetchContent_Declare(yyjson
+        GIT_REPOSITORY https://github.com/ibireme/yyjson.git
+        GIT_TAG 0.12.0)
+    FetchContent_MakeAvailable(yyjson)
+endif()
 
 set(STEAMWORKS_SDK_ZIP ${CMAKE_SOURCE_DIR}/steamworks_sdk_163.zip
     CACHE STRING "Path to Steamworks SDK (zip)")
@@ -32,11 +34,11 @@ endif()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 set(SDK_ROOT ${SDK_SOURCE_DIR}/sdk)
 set(SDK_INCLUDE_DIR ${SDK_ROOT}/public)
@@ -60,7 +62,7 @@ set(STEAM_API_JSON ${SDK_INCLUDE_DIR}/steam/steam_api.json)
 add_custom_command(
     OUTPUT ${GEN_H_OUT} ${GEN_C_OUT}
     COMMAND $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,${CAULK_PREBUILT_GENERATOR},$<TARGET_FILE:caulkGlueGenerator>>
-    ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
+            ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
     VERBATIM)
 
 add_library(caulk ${GEN_H_OUT} ${GEN_C_OUT} ${CAULK_SRC_DIR}/caulk.cpp)
@@ -72,53 +74,39 @@ target_include_directories(caulk
     PRIVATE ${SDK_INCLUDE_DIR}/steam ${SDK_INCLUDE_DIR})
 
 set(DYLIB_ROOT ${SDK_ROOT}/redistributable_bin)
+
 if(WIN32)
     if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-        set(CAULK_LINK_AGAINST ${DYLIB_ROOT}/steam_api.lib
-            CACHE INTERNAL "")
-        set(CAULK_COPY_DLL ${DYLIB_ROOT}/steam_api.dll
-            CACHE INTERNAL "")
+        set(CAULK_LINK_AGAINST ${DYLIB_ROOT}/steam_api.lib CACHE INTERNAL "")
+        set(CAULK_COPY_DLL ${DYLIB_ROOT}/steam_api.dll CACHE INTERNAL "")
     else()
-        set(CAULK_LINK_AGAINST ${DYLIB_ROOT}/win64/steam_api64.lib
-            CACHE INTERNAL "")
-        set(CAULK_COPY_DLL ${DYLIB_ROOT}/win64/steam_api64.dll
-            CACHE INTERNAL "")
+        set(CAULK_LINK_AGAINST ${DYLIB_ROOT}/win64/steam_api64.lib CACHE INTERNAL "")
+        set(CAULK_COPY_DLL ${DYLIB_ROOT}/win64/steam_api64.dll CACHE INTERNAL "")
     endif()
+elseif(LINUX)
+    if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux32/libsteam_api.so)
+    else()
+        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux64/libsteam_api.so)
+    endif()
+    set(CAULK_COPY_DLL ${STEAMWORKS_DLL_PATH} CACHE INTERNAL "")
+    set(CAULK_LINK_AGAINST ${CAULK_COPY_DLL} CACHE INTERNAL "")
 else()
-    if(LINUX)
-        if(${CMAKE_SIZEOF_VOID_P} STREQUAL 4) # 32 bitches...
-            set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux32/libsteam_api.so)
-        else()
-            set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/linux64/libsteam_api.so)
-        endif()
-    else()
-        set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/osx/libsteam_api.dylib)
-    endif()
-
-    set(CAULK_COPY_DLL ${STEAMWORKS_DLL_PATH}
-        CACHE INTERNAL "")
-    set(CAULK_LINK_AGAINST ${CAULK_COPY_DLL}
-        CACHE INTERNAL "")
+    set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/osx/libsteam_api.dylib)
+    set(CAULK_COPY_DLL ${STEAMWORKS_DLL_PATH} CACHE INTERNAL "")
+    set(CAULK_LINK_AGAINST ${CAULK_COPY_DLL} CACHE INTERNAL "")
 endif()
+
 target_link_libraries(caulk PUBLIC ${CAULK_LINK_AGAINST})
 
 function(caulk_populate TGT)
-    if(UNIX) # Stupid dwarf trick for dynamically linked SteamAPI to work...
+    if(UNIX) # stupid dwarf trick for dynamically linked SteamAPI to work...
         target_link_options(${TGT} PRIVATE "LINKER:-rpath,./")
     endif()
 
-    if(DEFINED CAULK_COPY_DLL)
-        add_custom_command(
-            TARGET ${TGT} POST_BUILD
-            COMMAND ${CMAKE_COMMAND}
-            -E copy ${CAULK_COPY_DLL} $<TARGET_FILE_DIR:${TGT}>
-            VERBATIM)
-    endif()
-
-    add_custom_command(
-        TARGET ${TGT} POST_BUILD
-        COMMAND ${CMAKE_COMMAND}
-        -E copy ${STEAM_APPID} $<TARGET_FILE_DIR:${TGT}>
+    add_custom_command(TARGET ${TGT} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${TGT}>
+                ${CAULK_COPY_DLL} ${STEAM_APPID}
         VERBATIM)
 endfunction()
 
