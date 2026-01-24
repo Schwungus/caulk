@@ -31,13 +31,13 @@
 #define LENGTH(expr) (sizeof((expr)) / sizeof(*(expr)))
 
 extern "C" {
-static void onCallCompleted(void*);
+static void on_call_completed(void*);
 
 bool caulk_Init() {
 	bool result = SteamAPI_Init();
 	if (result) {
 		SteamAPI_ManualDispatch_Init();
-		caulk_Register(SteamAPICallCompleted_t_iCallback, onCallCompleted);
+		caulk_Register(SteamAPICallCompleted_t_iCallback, on_call_completed);
 	}
 	return result;
 }
@@ -59,13 +59,13 @@ typedef struct {
 } CallbackHandler;
 
 #define COUNT (2048)
-static ResultHandler resultHandlers[COUNT] = {0};
-static CallbackHandler callbackHandlers[COUNT] = {0};
+static ResultHandler result_handlers[COUNT] = {0};
+static CallbackHandler callback_handlers[COUNT] = {0};
 #undef COUNT
 
 void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
-	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-		ResultHandler* iter = &resultHandlers[idx];
+	for (size_t idx = 0; idx < LENGTH(result_handlers); idx++) {
+		ResultHandler* iter = &result_handlers[idx];
 		if (iter->registered)
 			continue;
 		iter->fn = handler, iter->call = call, iter->registered = true;
@@ -76,8 +76,8 @@ void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 }
 
 void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
-	for (size_t idx = 0; idx < LENGTH(callbackHandlers); idx++) {
-		CallbackHandler* iter = &callbackHandlers[idx];
+	for (size_t idx = 0; idx < LENGTH(callback_handlers); idx++) {
+		CallbackHandler* iter = &callback_handlers[idx];
 		if (iter->registered)
 			continue;
 		iter->fn = handler, iter->callback = callback, iter->registered = true;
@@ -87,9 +87,9 @@ void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
 	// shit we ran out o fslots againds a.........
 }
 
-static void dispatchResultHandler(SteamAPICall_t call, void* result, bool ioFailed) {
-	for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-		ResultHandler* iter = &resultHandlers[idx];
+static void handle_dispatch_result(SteamAPICall_t call, void* result, bool ioFailed) {
+	for (size_t idx = 0; idx < LENGTH(result_handlers); idx++) {
+		ResultHandler* iter = &result_handlers[idx];
 		if (iter->registered && iter->call == call) {
 			iter->registered = false, iter->fn(result, ioFailed);
 			return;
@@ -97,35 +97,34 @@ static void dispatchResultHandler(SteamAPICall_t call, void* result, bool ioFail
 	}
 }
 
-static void onCallCompleted(void* data) {
-	HSteamPipe hSteamPipe = SteamAPI_GetHSteamPipe();
+static void on_call_completed(void* data) {
+	HSteamPipe steam_pipe = SteamAPI_GetHSteamPipe();
 
-	SteamAPICallCompleted_t* pCallback = reinterpret_cast<SteamAPICallCompleted_t*>(data);
-	void* callResult = malloc(pCallback->m_cubParam); // TODO: just use a static allocation?
+	SteamAPICallCompleted_t* callback = reinterpret_cast<SteamAPICallCompleted_t*>(data);
+	void* call_result = malloc(callback->m_cubParam); // TODO: just use a static allocation?
 
-	bool bFailed;
-	if (SteamAPI_ManualDispatch_GetAPICallResult(hSteamPipe, pCallback->m_hAsyncCall, callResult,
-		    pCallback->m_cubParam, pCallback->m_iCallback, &bFailed))
-		dispatchResultHandler(pCallback->m_hAsyncCall, callResult, bFailed);
+	bool failed;
+	if (SteamAPI_ManualDispatch_GetAPICallResult(steam_pipe, callback->m_hAsyncCall, call_result,
+		    callback->m_cubParam, callback->m_iCallback, &failed))
+		handle_dispatch_result(callback->m_hAsyncCall, call_result, failed);
 
-	free(callResult);
+	free(call_result);
 }
 
 void caulk_Dispatch() {
-	HSteamPipe hSteamPipe = SteamAPI_GetHSteamPipe();
-	SteamAPI_ManualDispatch_RunFrame(hSteamPipe);
+	HSteamPipe steam_pipe = SteamAPI_GetHSteamPipe();
+	SteamAPI_ManualDispatch_RunFrame(steam_pipe);
 
 	CallbackMsg_t callback;
-	while (SteamAPI_ManualDispatch_GetNextCallback(hSteamPipe, &callback)) {
-		for (size_t idx = 0; idx < LENGTH(resultHandlers); idx++) {
-			CallbackHandler* iter = &callbackHandlers[idx];
+	while (SteamAPI_ManualDispatch_GetNextCallback(steam_pipe, &callback)) {
+		for (size_t idx = 0; idx < LENGTH(result_handlers); idx++) {
+			CallbackHandler* iter = &callback_handlers[idx];
 			if (iter->registered && iter->callback == callback.m_iCallback) {
 				iter->fn(callback.m_pubParam);
 				break;
 			}
 		}
-
-		SteamAPI_ManualDispatch_FreeLastCallback(hSteamPipe);
+		SteamAPI_ManualDispatch_FreeLastCallback(steam_pipe);
 	}
 }
 }

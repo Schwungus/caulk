@@ -30,10 +30,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define sleepSecs(s) (Sleep((s) * 1000))
+#define sleep_secs(s) (Sleep((s) * 1000))
 #else
 #include <unistd.h>
-#define sleepSecs(s) (sleep(s))
+#define sleep_secs(s) (sleep(s))
 #endif
 
 int main(int argc, char* argv[]) {
@@ -48,17 +48,17 @@ int main(int argc, char* argv[]) {
 
 	printf("Logged in as %s (%llu)\n\n", caulk_SteamFriends_GetPersonaName(), caulk_SteamUser_GetSteamID());
 
-	int numFriends = caulk_SteamFriends_GetFriendCount(k_EFriendFlagImmediate);
-	printf("You have %d friends%s\n", numFriends, numFriends ? ":" : ", ...huh");
+	int num_friends = caulk_SteamFriends_GetFriendCount(k_EFriendFlagImmediate);
+	printf("You have %d friends%s\n", num_friends, num_friends ? ":" : ", ...huh");
 
-	for (int i = 0; i < numFriends; i++) {
+	for (int i = 0; i < num_friends; i++) {
 		CSteamID friend = caulk_SteamFriends_GetFriendByIndex(i, k_EFriendFlagImmediate);
-		const char* friendName = caulk_SteamFriends_GetFriendPersonaName(friend);
-		printf("%d. %s (%llu)\n", i + 1, friendName, friend);
+		const char* friend_name = caulk_SteamFriends_GetFriendPersonaName(friend);
+		printf("%d. %s (%llu)\n", i + 1, friend_name, friend);
 	}
 
 	fflush(stdout);
-	sleepSecs(5);
+	sleep_secs(5);
 
 	caulk_Shutdown();
 	return EXIT_SUCCESS;
