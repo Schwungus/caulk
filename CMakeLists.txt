@@ -103,9 +103,8 @@ endif()
 target_link_libraries(caulk PUBLIC ${CAULK_LINK_AGAINST})
 
 function(caulk_populate TGT)
-    # Stupid dwarf trick for dynamically linked SteamAPI to work...
-    if(UNIX)
-        set_property(TARGET ${TGT} PROPERTY LINK_FLAGS -Wl,-rpath,./)
+    if(UNIX) # Stupid dwarf trick for dynamically linked SteamAPI to work...
+        target_link_options(${TGT} PRIVATE "LINKER:-rpath,./")
     endif()
 
     if(DEFINED CAULK_COPY_DLL)
