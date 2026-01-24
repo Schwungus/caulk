@@ -2,7 +2,7 @@
 
 # caulk
 
-<img align="right" height="128" src="assets/huge-caulk.png" alt="A splattering of caulk">
+<img align="right" height="128" src=".github/assets/huge-caulk.png" alt="A splattering of caulk">
 
 caulk is an **up-to-date**, **functional**, **NON-DEPRECATED** wrapper for Valve's Steamworks API for use with plain C instead of C++ as intended. Capische?
 

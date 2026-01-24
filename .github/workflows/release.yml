@@ -33,7 +33,7 @@ jobs:
       - name: Package
         run: |
           rm -rf caulk; mkdir -p caulk
-          cp -rt caulk assets .github UNLICENSE README.md CMakeLists.txt
+          cp -rt caulk .github UNLICENSE README.md CMakeLists.txt
           mkdir -p caulk/src; cp -t caulk/src src/caulk.cpp
           cp build/caulkGlueGenerator caulk/ape; cp caulk/ape{,.exe}; chmod +x caulk/ape{,.exe}
           cd caulk; tar -czf ../build/$OUTNAME.tar.gz .
