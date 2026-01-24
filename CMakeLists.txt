@@ -60,7 +60,7 @@ set(GEN_C_OUT ${GEN_OUT_DIR}/__gen.cpp)
 set(STEAM_API_JSON ${SDK_INCLUDE_DIR}/steam/steam_api.json)
 
 add_custom_command(
-    OUTPUT ${GEN_H_OUT} ${GEN_C_OUT}
+    OUTPUT ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT}
     DEPENDS $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,,caulkGlueGenerator>
     COMMAND $<IF:$<BOOL:${CAULK_PREBUILT_GENERATOR}>,${CAULK_PREBUILT_GENERATOR},$<TARGET_FILE:caulkGlueGenerator>>
             ${GEN_H_OUT} ${GEN_C_OUT} ${GEN_API_OUT} ${STEAM_API_JSON}
@@ -92,10 +92,12 @@ elseif(LINUX)
     endif()
     set(CAULK_COPY_DLL ${STEAMWORKS_DLL_PATH} CACHE INTERNAL "")
     set(CAULK_LINK_AGAINST ${CAULK_COPY_DLL} CACHE INTERNAL "")
-else()
+elseif(APPLE)
     set(STEAMWORKS_DLL_PATH ${DYLIB_ROOT}/osx/libsteam_api.dylib)
     set(CAULK_COPY_DLL ${STEAMWORKS_DLL_PATH} CACHE INTERNAL "")
     set(CAULK_LINK_AGAINST ${CAULK_COPY_DLL} CACHE INTERNAL "")
+else()
+    message(FATAL_ERROR "Steamworks doesn't support your platform, apparently")
 endif()
 
 target_link_libraries(caulk PUBLIC ${CAULK_LINK_AGAINST})
@@ -114,7 +116,6 @@ endfunction()
 option(CAULK_BUILD_TEST "Build the caulkTest executable?" ON)
 if(CAULK_BUILD_TEST AND NOT CAULK_GENERATOR_ONLY)
     add_executable(caulkTest ${CAULK_SRC_DIR}/test.c)
-    set_target_properties(caulkTest PROPERTIES LINKER_LANGUAGE C)
     target_link_libraries(caulkTest PRIVATE caulk)
     caulk_populate(caulkTest)
 endif()
