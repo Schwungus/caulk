@@ -3,7 +3,6 @@ name: Release generator binary
 on:
   push:
     branches: [master]
-    tags:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,14 +26,14 @@ jobs:
         shell: bash
         run: |
           cmake -G Ninja -S . -B build \
-            -D CAULK_GENERATOR_ONLY=ON -D CAULK_BUILD_TEST=OFF \
+            -D CAULK_GENERATOR_ONLY=ON \
             -D CMAKE_TOOLCHAIN_FILE=.github/cosmopolitan.cmake
       - name: Build
         run: cmake --build build --target caulkGlueGenerator
       - name: Package
         run: |
           rm -rf caulk; mkdir -p caulk
-          cp -r -t caulk assets .github UNLICENSE README.md CMakeLists.txt
+          cp -rt caulk assets .github UNLICENSE README.md CMakeLists.txt
           mkdir -p caulk/src; cp -t caulk/src src/caulk.cpp
           cp build/caulkGlueGenerator caulk/ape; cp caulk/ape{,.exe}; chmod +x caulk/ape{,.exe}
           cd caulk; tar -czf ../build/$OUTNAME.tar.gz .
