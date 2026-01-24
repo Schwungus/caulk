@@ -149,14 +149,14 @@ static void genEnums(yyjson_val* enums, const char* master) {
 	yyjson_arr_iter_init(enums, &iter);
 
 	if (yyjson_get_len(enums))
-		fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n");
+		fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n\n");
 
 	yyjson_val* enm = NULL;
 	while ((enm = yyjson_arr_iter_next(&iter)))
 		defineEnum(enm, master);
 
 	if (yyjson_get_len(enums))
-		fprintf(apiOutput, "#endif\n");
+		fprintf(apiOutput, "#endif\n\n");
 }
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
@@ -196,7 +196,7 @@ static void genFields(yyjson_val* struc) {
 	}
 
 	fprintf(apiOutput, "};\n");
-	fprintf(apiOutput, "#endif\n");
+	fprintf(apiOutput, "#endif\n\n");
 }
 
 static void writeParams(FILE* out, yyjson_val* params) {
@@ -582,7 +582,7 @@ int main(int argc, char* argv[]) {
 
 	fprintf(hOutput, "#ifdef __cplusplus\n");
 	fprintf(hOutput, "}\n");
-	fprintf(hOutput, "#endif\n\n");
+	fprintf(hOutput, "#endif\n");
 
 	yyjson_doc_free(gDoc);
 	fclose(cppOutput), fclose(hOutput);
