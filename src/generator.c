@@ -126,16 +126,8 @@ static bool isConstructor(yyjson_val* method) {
 	return strstr(yyjson_get_str(yyjson_obj_get(method, "methodname_flat")), "Construct") != NULL;
 }
 
-static void declareEnum(yyjson_val* enm, const char* master) {
-	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
-	fprintf(apiOutput, "#ifndef __cplusplus\n");
-	fprintf(apiOutput, "typedef enum32_t %s;\n", name);
-	fprintf(apiOutput, "#endif\n");
-}
-
 static void defineEnum(yyjson_val* enm, const char* master) {
-	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
-	fprintf(apiOutput, "enum %s {\n", name);
+	fprintf(apiOutput, "typedef enum {\n");
 
 	yyjson_val* val = NULL;
 	yyjson_val* values = yyjson_obj_get(enm, "values");
@@ -143,12 +135,13 @@ static void defineEnum(yyjson_val* enm, const char* master) {
 	yyjson_arr_iter iter;
 	yyjson_arr_iter_init(values, &iter);
 	while ((val = yyjson_arr_iter_next(&iter))) {
-		name = yyjson_get_str(yyjson_obj_get(val, "name"));
+		const char* name = yyjson_get_str(yyjson_obj_get(val, "name"));
 		const char* value = yyjson_get_str(yyjson_obj_get(val, "value"));
 		fprintf(apiOutput, INDENT "%s = %s,\n", name, value);
 	}
 
-	fprintf(apiOutput, "};\n\n");
+	const char* name = fieldName(yyjson_get_str(yyjson_obj_get(enm, "enumname")), master);
+	fprintf(apiOutput, "} %s;\n\n", name);
 }
 
 static void genEnums(yyjson_val* enums, const char* master) {
@@ -159,10 +152,8 @@ static void genEnums(yyjson_val* enums, const char* master) {
 		fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n");
 
 	yyjson_val* enm = NULL;
-	while ((enm = yyjson_arr_iter_next(&iter))) {
-		declareEnum(enm, master);
+	while ((enm = yyjson_arr_iter_next(&iter)))
 		defineEnum(enm, master);
-	}
 
 	if (yyjson_get_len(enums))
 		fprintf(apiOutput, "#endif\n");
@@ -559,8 +550,7 @@ int main(int argc, char* argv[]) {
 	fprintf(hOutput, "#define PRI_CSteamID PRI_SteamID\n\n");
 
 	fprintf(apiOutput, "#ifndef CAULK_INTERNAL\n");
-	fprintf(apiOutput, "typedef uint32_t enum32_t;\n");
-	fprintf(apiOutput, "typedef enum32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
+	fprintf(apiOutput, "typedef int32_t SteamInputActionEvent_t__AnalogAction_t;\n"); // :(
 	fprintf(apiOutput, "typedef uint64_t CSteamID, CGameID;\n");
 	fprintf(apiOutput, "typedef void (*SteamAPIWarningMessageHook_t)(int, const char*);\n");
 	fprintf(apiOutput, "#endif\n\n");
