@@ -110,7 +110,7 @@ function(caulk_populate TGT)
         VERBATIM)
 endfunction()
 
-option(CAULK_BUILD_TEST "Build the caulkTest executable?" ON)
+option(CAULK_BUILD_TEST "Build the caulkTest executable?")
 if(CAULK_BUILD_TEST AND NOT CAULK_GENERATOR_ONLY)
     add_executable(caulkTest ${CAULK_SRC_DIR}/test.c)
     target_link_libraries(caulkTest PRIVATE caulk)
