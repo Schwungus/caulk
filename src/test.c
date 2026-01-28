@@ -37,6 +37,8 @@
 #endif
 
 int main(int argc, char* argv[]) {
+	(void)argc, (void)argv;
+
 	printf("==========\n");
 	printf("CAULK TEST\n");
 	printf("==========\n\n");

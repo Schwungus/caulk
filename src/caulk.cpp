@@ -66,10 +66,11 @@ static CallbackHandler callback_handlers[COUNT] = {0};
 void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(result_handlers); idx++) {
 		ResultHandler* iter = &result_handlers[idx];
-		if (iter->registered)
-			continue;
-		iter->fn = handler, iter->call = call, iter->registered = true;
-		return;
+		if (!iter->registered) {
+			iter->fn = handler, iter->call = call;
+			iter->registered = true;
+			return;
+		}
 	}
 
 	// shit we ran out o fslots.........
@@ -78,20 +79,22 @@ void caulk_Resolve(SteamAPICall_t call, caulk_ResultHandler handler) {
 void caulk_Register(uint32_t callback, caulk_CallbackHandler handler) {
 	for (size_t idx = 0; idx < LENGTH(callback_handlers); idx++) {
 		CallbackHandler* iter = &callback_handlers[idx];
-		if (iter->registered)
-			continue;
-		iter->fn = handler, iter->callback = callback, iter->registered = true;
-		return;
+		if (!iter->registered) {
+			iter->fn = handler, iter->callback = callback;
+			iter->registered = true;
+			return;
+		}
 	}
 
 	// shit we ran out o fslots againds a.........
 }
 
-static void handle_dispatch_result(SteamAPICall_t call, void* result, bool ioFailed) {
+static void handle_dispatch_result(SteamAPICall_t call, void* result, bool io_failed) {
 	for (size_t idx = 0; idx < LENGTH(result_handlers); idx++) {
 		ResultHandler* iter = &result_handlers[idx];
 		if (iter->registered && iter->call == call) {
-			iter->registered = false, iter->fn(result, ioFailed);
+			iter->registered = false;
+			iter->fn(result, io_failed);
 			return;
 		}
 	}
@@ -103,9 +106,9 @@ static void on_call_completed(void* data) {
 	SteamAPICallCompleted_t* callback = reinterpret_cast<SteamAPICallCompleted_t*>(data);
 	void* call_result = malloc(callback->m_cubParam); // TODO: just use a static allocation?
 
-	bool failed;
+	bool failed = false;
 	if (SteamAPI_ManualDispatch_GetAPICallResult(steam_pipe, callback->m_hAsyncCall, call_result,
-		    callback->m_cubParam, callback->m_iCallback, &failed))
+		    (int)callback->m_cubParam, callback->m_iCallback, &failed))
 		handle_dispatch_result(callback->m_hAsyncCall, call_result, failed);
 
 	free(call_result);

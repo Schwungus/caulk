@@ -160,17 +160,22 @@ static void genEnums(yyjson_val* enums, const char* master) {
 }
 
 static void writeDecl(FILE* out, const char* name, const char* type, bool private) {
-	char* offset = NULL;
-	if ((offset = strstr(type, "(*)"))) {
+	char* offset = strstr(type, "(*)");
+	if (offset) {
 		fprintN(out, type, offset + 2 - type);
 		fprintf(out, "%s%s%s", private ? "__" : "", name, offset + 2);
-	} else if ((offset = strstr(type, "["))) {
+		return;
+	}
+
+	offset = strstr(type, "[");
+	if (offset) {
 		fprintN(out, type, offset - 1 - type);
 		fprintf(out, " %s%s%s", private ? "__" : "", name, offset);
-	} else {
-		fprintf(out, "%s", type);
-		fprintf(out, " %s%s", private ? "__" : "", name);
+		return;
 	}
+
+	fprintf(out, "%s", type);
+	fprintf(out, " %s%s", private ? "__" : "", name);
 }
 
 static void genFields(yyjson_val* struc) {
@@ -530,8 +535,10 @@ int main(int argc, char* argv[]) {
 		return EXIT_FAILURE;
 
 	yyjson_read_flag flg = YYJSON_READ_ALLOW_COMMENTS | YYJSON_READ_ALLOW_TRAILING_COMMAS;
-	yyjson_read_err err;
-	if (!(gDoc = yyjson_read_file(jsonName, flg, NULL, &err)))
+	yyjson_read_err err = {0};
+	gDoc = yyjson_read_file(jsonName, flg, NULL, &err);
+
+	if (!gDoc)
 		return EXIT_FAILURE;
 
 	fprintf(hOutput, "#pragma once\n\n");

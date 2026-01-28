@@ -1,14 +1,14 @@
-Checks: |
-  clang-diagnostic-*,
+Checks: [
   clang-analyzer-*,
   bugprone-*,
-  -bugprone-narrowing-conversions,
-  -bugprone-easily-swappable-parameters,
-  -bugprone-assignment-in-if-condition,
-  -bugprone-reserved-identifier,
-  misc-*,
-  -misc-unused-parameters,
-  -misc-use-anonymous-namespace,
+  #-bugprone-suspicious-string-compare, # complains at `if (memcmp(...))` without explicit `!= 0`
+  #-bugprone-suspicious-memory-comparison, # complains at `memcmp` against C++ structs
+  -bugprone-easily-swappable-parameters, # false positives in internal spaghetti functions
   performance-*,
-  -performance-no-int-to-ptr,
-  portability-*
+  -performance-enum-size, # only applicable to C++
+  portability-*,
+  misc-*,
+  -misc-use-anonymous-namespace,
+  -misc-non-private-member-variables-in-classes,
+  cppcoreguidelines-init-variables,
+]
