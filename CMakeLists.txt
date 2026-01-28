@@ -4,8 +4,6 @@ project(caulk VERSION 0.1.0
     DESCRIPTION "THE Steamworks API wrapper for use with plain C"
     LANGUAGES C CXX)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(BUILD_SHARED_LIBS OFF)
 
