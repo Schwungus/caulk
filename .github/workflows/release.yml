@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - uses: bjia56/setup-cosmocc@v0.0.5
+      - uses: bjia56/setup-cosmocc@v0.0.6
         with:
           version: latest
       - name: Configure
