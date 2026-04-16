@@ -38,7 +38,7 @@ jobs:
           cp build/caulkGlueGenerator caulk/ape; cp caulk/ape{,.exe}; chmod +x caulk/ape{,.exe}
           cd caulk; tar -czf ../build/$OUTNAME.tar.gz .
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name == 'master' && 'rolling' || github.ref_name }}
           files: build/${{ env.OUTNAME }}.tar.gz
